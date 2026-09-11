@@ -197,7 +197,43 @@ NORMALISATION_TG = Scenario(
     },
 )
 
-SCENARIOS = [PENALTIES, TIEBREAKS, STATUSES, NORMALISATION_ES, NORMALISATION_TG]
+# Raw PS divides by $AL$6, the field's best PE. PE is 1-|actual-predicted|/actual,
+# which is exactly 0 for a prediction of 0 or of double the actual temperature,
+# so a field of such predictions puts the best PE at 0. Everyone then takes full
+# PS credit rather than #DIV/0!, the same rule as ES and TS.
+#   TG = 20 (field max) -> TS 30   raw = 10 (field max) -> ES 50   PS 20
+NORMALISATION_PE = Scenario(
+    "normalisation_pe_zero",
+    "Best prediction in the field scores PE 0 -- PS must award full marks, not divide by zero.",
+    teams=[
+        team("PredictZero", start_temp=20, predicted_temp=0, actual_temp=40, part_i_score=10),
+        team("PredictDouble", start_temp=20, predicted_temp=80, actual_temp=40, part_i_score=10),
+    ],
+    expect={
+        # pe=0 confirms the setup really produces the degenerate field.
+        "PredictZero": dict(pe=0, ps=20, score=100),
+        "PredictDouble": dict(pe=0, ps=20, score=100),
+    },
+)
+
+# The one harmless way max PE reaches 0: nobody enters a prediction. PE stays
+# blank and Raw PS's ISNUMBER(Z) gate skips the division, so PS is simply 0.
+# Pins that gate -- removing it would reintroduce the division.
+PS_NO_PREDICTIONS = Scenario(
+    "ps_no_predictions",
+    "No team enters a prediction -- PS must be 0 without dividing.",
+    teams=[
+        team("NoPredictionA", start_temp=20, actual_temp=40, part_i_score=10),
+        team("NoPredictionB", start_temp=20, actual_temp=30, part_i_score=5),
+    ],
+    expect={
+        "NoPredictionA": dict(pe="", ps=0),
+        "NoPredictionB": dict(pe="", ps=0),
+    },
+)
+
+SCENARIOS = [PENALTIES, TIEBREAKS, STATUSES, NORMALISATION_ES, NORMALISATION_TG,
+             NORMALISATION_PE, PS_NO_PREDICTIONS]
 
 
 if __name__ == "__main__":

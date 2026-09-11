@@ -1,0 +1,6 @@
+# Python bytecode from the test harness (test-utils modules are imported,
+# so the cache lands there; event suites run as __main__ and are not cached)
+__pycache__/
+
+# LibreOffice lock files, created beside a workbook while it is open
+.~lock.*#

@@ -47,8 +47,11 @@ class Scenario:
 
     teams   list of dicts keyed by SheetSpec.input_cols names; each needs a
             "school" key, which is what `expect` is keyed by.
-    expect  {school: {output_name: expected_value}}
-    extra   [(absolute_cell_ref, expected_value)] for whole-row checks
+    expect  {school: {output_name: expected}}
+    extra   [(cell_ref, expected)] or [(label, cell_ref, expected)] for cells
+            outside the per-team output columns
+
+    `expected` is a literal value or a Check such as is_number / nonzero.
     """
 
     def __init__(self, name, why, teams, expect, extra=None):
@@ -81,7 +84,32 @@ def build(path, spec, scenario):
     return wb
 
 
+class Check:
+    """An expectation that is a property rather than a single value.
+
+    Use for invariants such as "never zero", where no specific value is
+    intended. Shows as its description in failure output.
+    """
+
+    def __init__(self, description, predicate):
+        self.description = description
+        self.predicate = predicate
+
+    def __call__(self, actual):
+        return self.predicate(actual)
+
+    def __str__(self):
+        return self.description
+
+
+# Error values come back as text (#DIV/0!), so "is a float" means "computed".
+is_number = Check("a number", lambda a: isinstance(a, float))
+nonzero = Check("a nonzero number", lambda a: isinstance(a, float) and a != 0)
+
+
 def matches(expected, actual, tolerance):
+    if isinstance(expected, Check):
+        return expected(actual)
     if isinstance(expected, (int, float)) and not isinstance(expected, bool):
         return isinstance(actual, float) and abs(actual - expected) <= tolerance
     return str(actual) == str(expected)
@@ -114,8 +142,13 @@ def run(path, spec, scenarios, profile, only=None):
             for field, expected in sc.expect.get(t["school"], {}).items():
                 ref = "%s%d" % (spec.out_cols[field], row)
                 checks.append(("%s.%s" % (t["school"], field), ref, expected))
-        for ref, expected in sc.extra:
-            checks.append(("row %s empty" % ref[2:], ref, expected))
+        for entry in sc.extra:
+            if len(entry) == 3:
+                label, ref, expected = entry
+            else:
+                ref, expected = entry
+                label = "row %s empty" % ref.lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+            checks.append((label, ref, expected))
 
         for label, ref, expected in checks:
             actual = values.get(ref, "")

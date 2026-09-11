@@ -106,8 +106,11 @@ def clear_cached_values(xml):
         open_tag = re.sub(r'\st="[^"]*"', "", m.group(1))
         return open_tag + m.group(2)
 
-    return re.sub(r'(<c\b[^>]*>)(\s*<f\b[^>]*(?:/>|>.*?</f>))\s*<v>[^<]*</v>',
-                  repl, xml, flags=re.S)
+    # Formula text is XML-escaped, so it never contains a raw "<". Matching it
+    # with [^<]* rather than .*? keeps this linear: with .*?, a formula cell
+    # that has no cached <v> lets the match run on across every later cell.
+    return re.sub(r'(<c\b[^>]*>)(\s*<f\b[^>]*(?:/>|>[^<]*</f>))\s*<v>[^<]*</v>',
+                  repl, xml)
 
 
 # --------------------------------------------------------------------------

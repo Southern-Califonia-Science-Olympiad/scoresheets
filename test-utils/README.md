@@ -11,6 +11,9 @@ keeps its own cases in `<Event>/tests/`.
 Python 3 stdlib only, plus `soffice` on `PATH`. The runner uses its own
 LibreOffice profile directory, so it is safe to run while a sheet is open.
 
+The root `Makefile` discovers suites as `*/tests/test_scoresheet.py`, so a new
+event folder following the layout below is picked up by `make` automatically.
+
 ## Why LibreOffice
 
 The scoring logic lives in formulas, so testing it means recalculating with real

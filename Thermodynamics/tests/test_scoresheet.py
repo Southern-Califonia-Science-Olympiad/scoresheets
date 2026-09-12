@@ -43,6 +43,7 @@ OUT_COLS = {
     "es": "AP", "score": "AQ", "rank": "AR",
     "tb1": "AS", "tb1_rank": "AT", "tb2": "AU", "tb2_rank": "AV",
     "tb3_rank": "AW", "rank_tb": "AX", "rank_diff": "AY",
+    "errors": "BA",
     "exp_score": "BB", "exp_tier": "BC", "exp_tiebreak": "BD",
     "exp_rank": "BE", "points": "BF",
 }
@@ -232,8 +233,31 @@ PS_NO_PREDICTIONS = Scenario(
     },
 )
 
+# The Errors column (BA) surfaces the AI/AM checks to the scorer. Messages are
+# derived from the inputs rather than from ISERROR(AH), so they stay correct if
+# TG/PE are later changed to degrade instead of erroring.
+INPUT_ERRORS = Scenario(
+    "input_errors",
+    "Missing or zero temperature boxes must name themselves in the Errors column.",
+    teams=[
+        team("Complete", start_temp=20, predicted_temp=40, actual_temp=40, part_i_score=10),
+        # box 6 blank -- TG cannot be computed
+        team("NoStartTemp", predicted_temp=40, actual_temp=40, part_i_score=10),
+        # box 8 blank -- TG and PE both lose their actual temperature
+        team("NoActualTemp", start_temp=20, predicted_temp=40, part_i_score=10),
+        # box 8 present but zero -- PE divides by it
+        team("ZeroActualTemp", start_temp=20, predicted_temp=40, actual_temp=0, part_i_score=10),
+    ],
+    expect={
+        "Complete": dict(errors=""),
+        "NoStartTemp": dict(errors="Box 6 or Box 8 is missing."),
+        "NoActualTemp": dict(errors="Box 6 or Box 8 is missing."),
+        "ZeroActualTemp": dict(errors="Box 8 cannot be 0."),
+    },
+)
+
 SCENARIOS = [PENALTIES, TIEBREAKS, STATUSES, NORMALISATION_ES, NORMALISATION_TG,
-             NORMALISATION_PE, PS_NO_PREDICTIONS]
+             NORMALISATION_PE, PS_NO_PREDICTIONS, INPUT_ERRORS]
 
 
 if __name__ == "__main__":

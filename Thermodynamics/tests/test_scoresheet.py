@@ -256,8 +256,26 @@ INPUT_ERRORS = Scenario(
     },
 )
 
+# TG and PE yield "" rather than an error for unusable input, so the MAX that
+# normalises every team's score never sees an error value. Without this, one
+# missing box turned every team's TS, Score, Rank and Points into #VALUE!.
+ERROR_CONTAINMENT = Scenario(
+    "error_containment",
+    "A row with a missing box must not disturb any other team's score or rank.",
+    teams=[
+        team("Complete", start_temp=20, predicted_temp=40, actual_temp=40, part_i_score=10),
+        team("MissingStart", predicted_temp=40, actual_temp=40, part_i_score=10),
+    ],
+    expect={
+        "Complete": dict(ts=30, ps=20, es=50, score=100, rank=1, points=1, errors=""),
+        # Loses TS only -- PE and Part I do not depend on the missing box 6.
+        "MissingStart": dict(ts=0, ps=20, es=50, score=70, rank=2, points=2,
+                             errors="Box 6 or Box 8 is missing."),
+    },
+)
+
 SCENARIOS = [PENALTIES, TIEBREAKS, STATUSES, NORMALISATION_ES, NORMALISATION_TG,
-             NORMALISATION_PE, PS_NO_PREDICTIONS, INPUT_ERRORS]
+             NORMALISATION_PE, PS_NO_PREDICTIONS, INPUT_ERRORS, ERROR_CONTAINMENT]
 
 
 if __name__ == "__main__":

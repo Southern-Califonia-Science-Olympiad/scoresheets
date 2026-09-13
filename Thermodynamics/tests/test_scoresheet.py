@@ -261,17 +261,31 @@ INPUT_ERRORS = Scenario(
 # missing box turned every team's TS, Score, Rank and Points into #VALUE!.
 ERROR_CONTAINMENT = Scenario(
     "error_containment",
-    "A row with a missing box must not disturb any other team's score or rank.",
+    "An errored row is neither scored nor ranked, and disturbs no other team.",
     teams=[
         team("Complete", start_temp=20, predicted_temp=40, actual_temp=40, part_i_score=10),
         team("MissingStart", predicted_temp=40, actual_temp=40, part_i_score=10),
+        team("Runner", start_temp=20, predicted_temp=30, actual_temp=30, part_i_score=5),
     ],
     expect={
         "Complete": dict(ts=30, ps=20, es=50, score=100, rank=1, points=1, errors=""),
-        # Loses TS only -- PE and Part I do not depend on the missing box 6.
-        "MissingStart": dict(ts=0, ps=20, es=50, score=70, rank=2, points=2,
+        # Components still compute (TS is 0 without box 6), but no score, rank
+        # or points are issued while the error stands.
+        "MissingStart": dict(ts=0, ps=20, es=50, score="ERR", rank="ERR",
+                             exp_rank="ERR", points="ERR",
                              errors="Box 6 or Box 8 is missing."),
+        # Would have placed 3rd behind MissingStart's 70; the errored row must
+        # not consume a rank slot, so this is 2nd.
+        "Runner": dict(score=60, rank=2, points=2, errors=""),
     },
+    # The final rankings block sorts on BJ (= Points + row/1000) and ranks it
+    # with RANK over the whole column. A non-numeric Points value must leave
+    # that column error-free, or every other team loses its sort rank.
+    extra=[("errored row has no sort key", "BJ9", ""),
+           ("sort rank still computes", "BK8", 1),
+           ("1st place in final rankings", "BR8", 1),
+           ("2nd place in final rankings", "BR9", 2),
+           ("no third place listed", "BR10", "")],
 )
 
 SCENARIOS = [PENALTIES, TIEBREAKS, STATUSES, NORMALISATION_ES, NORMALISATION_TG,

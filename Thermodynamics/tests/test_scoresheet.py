@@ -44,8 +44,10 @@ OUT_COLS = {
     "tb1": "AS", "tb1_rank": "AT", "tb2": "AU", "tb2_rank": "AV",
     "tb3_rank": "AW", "rank_tb": "AX", "rank_diff": "AY",
     "errors": "BA",
-    "exp_score": "BB", "exp_tier": "BC", "exp_tiebreak": "BD",
-    "exp_rank": "BE", "points": "BF",
+    # Visible score breakdown, immediately right of Errors, in ES/TS/PS order.
+    "exp_es": "BB", "exp_ts": "BC", "exp_ps": "BD",
+    "exp_score": "BE", "exp_tier": "BF", "exp_tiebreak": "BG",
+    "exp_rank": "BH", "points": "BI",
 }
 
 SPEC = SheetSpec(INPUT_COLS, OUT_COLS, first_row=8, clear_through=40)
@@ -281,15 +283,26 @@ ERROR_CONTAINMENT = Scenario(
     # The final rankings block sorts on BJ (= Points + row/1000) and ranks it
     # with RANK over the whole column. A non-numeric Points value must leave
     # that column error-free, or every other team loses its sort rank.
-    extra=[("errored row has no sort key", "BJ9", ""),
-           ("sort rank still computes", "BK8", 1),
-           ("1st place in final rankings", "BR8", 1),
-           ("2nd place in final rankings", "BR9", 2),
-           ("no third place listed", "BR10", "")],
+    extra=[("errored row has no sort key", "BM9", ""),
+           ("sort rank still computes", "BN8", 1),
+           ("1st place in final rankings", "BU8", 1),
+           ("2nd place in final rankings", "BU9", 2),
+           ("no third place listed", "BU10", "")],
 )
 
 SCENARIOS = [PENALTIES, TIEBREAKS, STATUSES, NORMALISATION_ES, NORMALISATION_TG,
              NORMALISATION_PE, PS_NO_PREDICTIONS, INPUT_ERRORS, ERROR_CONTAINMENT]
+
+# BB/BC/BD are the visible breakdown beside Errors; they exist only to display
+# the working columns AP/AK/AO. Wherever a scenario asserts a component, assert
+# the same value on the column that shows it, so the two cannot drift apart.
+# Derived rather than written out per team: a mirror is not a separate fact.
+MIRRORED = {"es": "exp_es", "ts": "exp_ts", "ps": "exp_ps"}
+for _sc in SCENARIOS:
+    for _expect in _sc.expect.values():
+        for _component, _shown in MIRRORED.items():
+            if _component in _expect and _shown not in _expect:
+                _expect[_shown] = _expect[_component]
 
 
 if __name__ == "__main__":

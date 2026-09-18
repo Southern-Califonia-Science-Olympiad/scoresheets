@@ -1,6 +1,6 @@
 # Thermodynamics scoresheet tests
 
-Targeted regression tests for `../Thermodynamics B_C - Scoresheet.xlsx`.
+Targeted regression tests for `../scoresheet_bc.xlsx`.
 
 Shared machinery lives in [`../../test-utils`](../../test-utils) — see its
 README for how the harness works and how to wire up another event. This file
@@ -11,10 +11,10 @@ holds only the Thermodynamics column maps and scenarios.
 From the repo root:
 
 ```sh
-make                                     # every event's suite
-make test-Thermodynamics                 # just this one
-make test-Thermodynamics ONLY=tiebreaks  # one scenario
-make test-Thermodynamics SEED=42         # replay with a given row placement
+make                                          # every event's suite
+make test-2027Thermodynamics                 # just this one
+make test-2027Thermodynamics ONLY=tiebreaks  # one scenario
+make test-2027Thermodynamics SEED=42         # replay with a given row placement
 ```
 
 Teams are placed on randomly chosen rows in 8–507, which differ from run to

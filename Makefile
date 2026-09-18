@@ -1,7 +1,7 @@
 # Scoresheet regression tests.
 #
 #   make                      run every event's suite
-#   make test-Thermodynamics  run one event
+#   make test-2027Thermodynamics  run one event
 #   make test ONLY=tiebreaks  run one scenario across every suite
 #   make SEED=42              replay a run's random row placement
 #   make list                 show the suites that were discovered
@@ -31,7 +31,7 @@ all: test
 help:
 	@echo "Scoresheet test targets:"
 	@echo "  make                      run every event's suite"
-	@echo "  make test-<Event>         run one event (e.g. test-Thermodynamics)"
+	@echo "  make test-<Event>         run one event (e.g. test-2027Thermodynamics)"
 	@echo "  make list                 list discovered suites"
 	@echo "  make clean                remove __pycache__ directories"
 	@echo ""

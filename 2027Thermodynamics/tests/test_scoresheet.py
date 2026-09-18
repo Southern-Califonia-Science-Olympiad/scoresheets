@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "test-utils"))
 from runner import Scenario, SheetSpec, main  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_SHEET = HERE.parent / "Thermodynamics B_C - Scoresheet.xlsx"
+DEFAULT_SHEET = HERE.parent / "scoresheet_bc.xlsx"
 
 # Input boxes, by the numbering printed in row 3 of the Scoring sheet.
 INPUT_COLS = {

@@ -11,7 +11,15 @@ holds only the Thermodynamics column maps and scenarios.
 From the repo root:
 
 ```sh
-make                                   # every event's suite
-make test-Thermodynamics               # just this one
-make test-Thermodynamics ONLY=tiebreaks
+make                                     # every event's suite
+make test-Thermodynamics                 # just this one
+make test-Thermodynamics ONLY=tiebreaks  # one scenario
+make test-Thermodynamics SEED=42         # replay with a given row placement
 ```
+
+Teams are placed on randomly chosen rows in 8–507, which differ from run to
+run so formulas are checked across the whole fill-down range. Each run prints
+its seed; a failure that only appears under some seeds is a fill-down defect.
+
+Runs from any working directory. Exit status is non-zero if any check fails.
+Requires Python 3 (stdlib only) and `soffice` on `PATH`.

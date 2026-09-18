@@ -3,6 +3,7 @@
 #   make                      run every event's suite
 #   make test-Thermodynamics  run one event
 #   make test ONLY=tiebreaks  run one scenario across every suite
+#   make SEED=42              replay a run's random row placement
 #   make list                 show the suites that were discovered
 #   make help                 usage
 #
@@ -16,8 +17,9 @@ SUITES := $(sort $(wildcard */tests/test_scoresheet.py))
 EVENTS := $(patsubst %/tests/test_scoresheet.py,%,$(SUITES))
 
 # Optional: ONLY=<scenario> limits to one scenario, SHEET=<path> tests a
-# different workbook than the one beside the suite.
-ARGS := $(if $(SHEET),"$(SHEET)") $(if $(ONLY),--only $(ONLY))
+# different workbook than the one beside the suite, SEED=<n> replays the
+# random row placement printed at the top of a run.
+ARGS := $(if $(SHEET),"$(SHEET)") $(if $(ONLY),--only $(ONLY)) $(if $(SEED),--seed $(SEED))
 
 .DEFAULT_GOAL := test
 # test-% is deliberately not .PHONY: make skips implicit-rule search for phony
@@ -36,6 +38,7 @@ help:
 	@echo "Variables:"
 	@echo "  ONLY=<scenario>           run a single scenario"
 	@echo "  SHEET=<path>              test a specific workbook"
+	@echo "  SEED=<n>                  replay a run's random row placement"
 	@echo "  PYTHON=<exe>              python interpreter (default: python3)"
 
 list:

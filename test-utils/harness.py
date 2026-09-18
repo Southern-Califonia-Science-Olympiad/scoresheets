@@ -96,6 +96,25 @@ def set_cell(xml, ref, value):
     return xml[:start] + row + xml[end:]
 
 
+def clear_cells(xml, cols, first_row, last_row):
+    """Empty every cell in `cols` for rows first_row..last_row, in one pass.
+
+    Keeps each cell's style so the sheet looks the same; only the value goes.
+    """
+    cols = set(cols)
+
+    def repl(m):
+        col, row, attrs = m.group(1), int(m.group(2)), m.group(3)
+        if col not in cols or not first_row <= row <= last_row:
+            return m.group()
+        sm = re.search(r'\ss="(\d+)"', attrs)
+        style = ' s="%s"' % sm.group(1) if sm else ""
+        return '<c r="%s%d"%s/>' % (col, row, style)
+
+    return re.sub(r'<c r="([A-Z]+)(\d+)"([^>]*?)(?:/>|>.*?</c>)', repl, xml,
+                  flags=re.S)
+
+
 def clear_cached_values(xml):
     """Drop cached results from formula cells so LibreOffice recalculates.
 
@@ -180,6 +199,9 @@ class Workbook:
 
     def set(self, ref, value):
         self.sheet = set_cell(self.sheet, ref, value)
+
+    def clear(self, cols, first_row, last_row):
+        self.sheet = clear_cells(self.sheet, cols, first_row, last_row)
 
     def recalc(self, profile_dir=None):
         """Write out, run soffice headless, return {ref: value} of sheet1."""

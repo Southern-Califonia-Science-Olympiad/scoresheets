@@ -50,7 +50,7 @@ OUT_COLS = {
     "exp_rank": "BH", "points": "BI",
 }
 
-SPEC = SheetSpec(INPUT_COLS, OUT_COLS, first_row=8, clear_through=40)
+SPEC = SheetSpec(INPUT_COLS, OUT_COLS, first_row=8, last_row=507)
 
 BOXES_OK = {"impounded": "T", "no_hazmat": "T", "const_para": "T",
             "no_touch": "T", "comp_para": "T"}
@@ -86,8 +86,8 @@ PENALTIES = Scenario(
     "penalties",
     "Construction/competition penalty multipliers and the T/U/W gates.",
     teams=[
-        team("ConstructionPenaltyRow8", const_para="F", **SAME_NUMBERS),
-        team("ConstructionPenaltyRow9", const_para="F", **SAME_NUMBERS),
+        team("ConstructionPenaltyA", const_para="F", **SAME_NUMBERS),
+        team("ConstructionPenaltyB", const_para="F", **SAME_NUMBERS),
         team("CompetitionPenalty", comp_para="F", **SAME_NUMBERS),
         team("BothPenalties", const_para="F", comp_para="F", **SAME_NUMBERS),
         team("TouchedSetup", no_touch="F", **SAME_NUMBERS),
@@ -96,9 +96,9 @@ PENALTIES = Scenario(
         team("Clean", **SAME_NUMBERS),
     ],
     expect={
-        # Identical inputs to the row below it -- both must yield 0.7.
-        "ConstructionPenaltyRow8": dict(mult=0.7, tg=20, ts=21, ps=14, es=50, score=85),
-        "ConstructionPenaltyRow9": dict(mult=0.7, tg=20, ts=21, ps=14, es=50, score=85),
+        # Identical inputs on two different rows -- both must yield 0.7.
+        "ConstructionPenaltyA": dict(mult=0.7, tg=20, ts=21, ps=14, es=50, score=85),
+        "ConstructionPenaltyB": dict(mult=0.7, tg=20, ts=21, ps=14, es=50, score=85),
         "CompetitionPenalty": dict(mult=0.9, tg=20, ts=27, ps=18, es=50, score=95),
         "BothPenalties": dict(mult=0.63, tg=20, ts=18.9, ps=12.6, es=50, score=81.5),
         # Box 4 gates Raw TS and Raw PS but NOT the TG calculation itself.
@@ -166,7 +166,7 @@ STATUSES = Scenario(
                        exp_rank="NS", exp_score="NS", points=5),
     },
     # A row with no team entered must stay empty all the way to Points.
-    extra=[("AE12", ""), ("AQ12", ""), ("BE12", ""), ("BF12", "")],
+    extra=[("AE{unused}", ""), ("AQ{unused}", ""), ("BE{unused}", ""), ("BF{unused}", "")],
 )
 
 # Part I raw score cannot go negative, so a field max of 0 means everyone tied
@@ -280,11 +280,12 @@ ERROR_CONTAINMENT = Scenario(
         # not consume a rank slot, so this is 2nd.
         "Runner": dict(score=60, rank=2, points=2, errors=""),
     },
-    # The final rankings block sorts on BJ (= Points + row/1000) and ranks it
+    # The final rankings block sorts on BM (= Points + row/1000) and ranks it
     # with RANK over the whole column. A non-numeric Points value must leave
     # that column error-free, or every other team loses its sort rank.
-    extra=[("errored row has no sort key", "BM9", ""),
-           ("sort rank still computes", "BN8", 1),
+    # BU is the rankings list itself, filled from the top, so its rows are fixed.
+    extra=[("errored row has no sort key", "BM{MissingStart}", ""),
+           ("sort rank still computes", "BN{Complete}", 1),
            ("1st place in final rankings", "BU8", 1),
            ("2nd place in final rankings", "BU9", 2),
            ("no third place listed", "BU10", "")],

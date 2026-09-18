@@ -18,6 +18,7 @@ Typical use from `<Event>/tests/test_scoresheet.py`:
         sys.exit(main(DEFAULT_SHEET, SPEC, SCENARIOS))
 """
 
+import random
 import sys
 import tempfile
 from pathlib import Path
@@ -28,17 +29,18 @@ from harness import Workbook
 class SheetSpec:
     """Where a given event's scoresheet keeps its inputs and results.
 
-    input_cols / out_cols map friendly names to column letters. Teams are
-    written into consecutive rows starting at first_row; rows up to
-    clear_through are blanked first so each run is deterministic.
+    input_cols / out_cols map friendly names to column letters. first_row
+    and last_row bound the team data range. Every input cell in that range is
+    blanked before a scenario is written, and teams land on randomly chosen
+    rows within it (see pick_rows).
     """
 
     def __init__(self, input_cols, out_cols,
-                 first_row=8, clear_through=40, tolerance=1e-6):
+                 first_row=8, last_row=507, tolerance=1e-6):
         self.input_cols = input_cols
         self.out_cols = out_cols
         self.first_row = first_row
-        self.clear_through = clear_through
+        self.last_row = last_row
         self.tolerance = tolerance
 
 
@@ -49,7 +51,10 @@ class Scenario:
             "school" key, which is what `expect` is keyed by.
     expect  {school: {output_name: expected}}
     extra   [(cell_ref, expected)] or [(label, cell_ref, expected)] for cells
-            outside the per-team output columns
+            outside the per-team output columns. Teams don't sit on fixed
+            rows, so a ref names its row by placeholder: "BM{MissingStart}"
+            is column BM on that school's row, and "AE{unused}" is a data row
+            with no team on it. Refs without a placeholder are absolute.
 
     `expected` is a literal value or a Check such as is_number / nonzero.
     """
@@ -62,16 +67,45 @@ class Scenario:
         self.extra = extra or []
 
 
-def build(path, spec, scenario):
+def pick_rows(spec, scenarios, seed):
+    """One shared pool of randomly chosen data rows for the whole run.
+
+    Formulas are filled down the data range, and a fill-down mistake shows up
+    only on the rows it affects -- row 8 being right proves nothing. Placing
+    teams at random rows exercises the formulas across the whole range.
+
+    Every scenario draws from the same pool: a scenario with n teams uses the
+    first n rows of it, so scenarios share rows as far as their sizes allow.
+    The pool is sized from all scenarios, not just the selected ones, so a
+    seed reproduces the same rows under --only. One spare row is kept for the
+    "{unused}" placeholder.
+    """
+    need = max(len(s.teams) for s in scenarios) + 1
+    span = range(spec.first_row, spec.last_row + 1)
+    if need > len(span):
+        sys.exit("scenarios need %d rows, data range has %d" % (need, len(span)))
+    return random.Random(seed).sample(span, need)
+
+
+def layout(pool, scenario):
+    """Rows for this scenario's teams, plus the {placeholder} row map.
+
+    Rows are kept ascending so teams sit in the order they are listed, which
+    anything that breaks ties by row position relies on.
+    """
+    n = len(scenario.teams)
+    rows = sorted(pool[:n])
+    names = {t["school"]: r for t, r in zip(scenario.teams, rows)}
+    names["unused"] = pool[n]
+    return rows, names
+
+
+def build(path, spec, scenario, rows):
     """Copy the workbook and write the scenario's teams into it."""
     wb = Workbook(path)
+    wb.clear(spec.input_cols.values(), spec.first_row, spec.last_row)
 
-    for row in range(spec.first_row, spec.clear_through + 1):
-        for col in spec.input_cols.values():
-            wb.set("%s%d" % (col, row), None)
-
-    for i, t in enumerate(scenario.teams):
-        row = spec.first_row + i
+    for i, (t, row) in enumerate(zip(scenario.teams, rows)):
         values = {}
         if "team_no" in spec.input_cols:
             values["team_no"] = i + 1
@@ -123,7 +157,7 @@ def show(value):
     return str(value)
 
 
-def run(path, spec, scenarios, profile, only=None):
+def run(path, spec, scenarios, profile, only=None, seed=None):
     total = failed = 0
     problems = []
 
@@ -132,13 +166,20 @@ def run(path, spec, scenarios, profile, only=None):
         sys.exit("no scenario named %r (have: %s)"
                  % (only, ", ".join(s.name for s in scenarios)))
 
+    if seed is None:
+        seed = random.randrange(10 ** 6)
+    pool = pick_rows(spec, scenarios, seed)
+    print("Seed: %d (rerun with --seed %d, or SEED=%d under make)"
+          % (seed, seed, seed))
+    print("Rows: %s" % ", ".join(str(r) for r in sorted(pool)))
+
     for sc in selected:
         print("\n\033[1m%s\033[0m -- %s" % (sc.name, sc.why))
-        values = build(path, spec, sc).recalc(profile)
+        rows, names = layout(pool, sc)
+        values = build(path, spec, sc, rows).recalc(profile)
 
         checks = []
-        for i, t in enumerate(sc.teams):
-            row = spec.first_row + i
+        for t, row in zip(sc.teams, rows):
             for field, expected in sc.expect.get(t["school"], {}).items():
                 ref = "%s%d" % (spec.out_cols[field], row)
                 checks.append(("%s.%s" % (t["school"], field), ref, expected))
@@ -147,8 +188,8 @@ def run(path, spec, scenarios, profile, only=None):
                 label, ref, expected = entry
             else:
                 ref, expected = entry
-                label = "row %s empty" % ref.lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-            checks.append((label, ref, expected))
+                label = ref
+            checks.append((label, ref.format_map(names), expected))
 
         for label, ref, expected in checks:
             actual = values.get(ref, "")
@@ -181,10 +222,16 @@ def main(default_sheet, spec, scenarios, argv=None):
         only = args[i + 1]
         del args[i:i + 2]
 
+    seed = None
+    if "--seed" in args:
+        i = args.index("--seed")
+        seed = int(args[i + 1])
+        del args[i:i + 2]
+
     path = Path(args[0]) if args else Path(default_sheet)
     if not path.exists():
         sys.exit("scoresheet not found: %s" % path)
 
     print("Testing: %s" % path)
     profile = tempfile.mkdtemp(prefix="scoresheet-lo-profile-")
-    return run(path, spec, scenarios, profile, only)
+    return run(path, spec, scenarios, profile, only, seed)

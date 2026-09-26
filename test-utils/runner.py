@@ -55,16 +55,42 @@ class Scenario:
             rows, so a ref names its row by placeholder: "BM{MissingStart}"
             is column BM on that school's row, and "AE{unused}" is a data row
             with no team on it. Refs without a placeholder are absolute.
+    cells   {cell_ref: value} for inputs outside the team rows, such as a
+            target time every team is scored against. None blanks the cell.
 
     `expected` is a literal value or a Check such as is_number / nonzero.
     """
 
-    def __init__(self, name, why, teams, expect, extra=None):
+    def __init__(self, name, why, teams, expect, extra=None, cells=None):
         self.name = name
         self.why = why
         self.teams = teams
         self.expect = expect
         self.extra = extra or []
+        self.cells = cells or {}
+
+
+def table(fields, rows):
+    """Build a Scenario's `expect` as a table: every team checks the same cells.
+
+    fields  tuple of output names, the table's columns
+    rows    {school: tuple of expected values, one per field}
+
+        expect=table(("score", "rank"), {
+            "Winner": (97, 1),
+            "Runner": (80, 2),
+        })
+
+    A row with the wrong number of values is an error, so no team can quietly
+    skip a column the others are checked on.
+    """
+    expect = {}
+    for school, values in rows.items():
+        if len(values) != len(fields):
+            raise ValueError("%s: %d values for %d fields %s"
+                             % (school, len(values), len(fields), fields))
+        expect[school] = dict(zip(fields, values))
+    return expect
 
 
 def pick_rows(spec, scenarios, seed):
@@ -105,6 +131,9 @@ def build(path, spec, scenario, rows):
     wb = Workbook(path)
     wb.clear(spec.input_cols.values(), spec.first_row, spec.last_row)
 
+    for ref, value in scenario.cells.items():
+        wb.set(ref, value)
+
     for i, (t, row) in enumerate(zip(scenario.teams, rows)):
         values = {}
         if "team_no" in spec.input_cols:
@@ -144,6 +173,11 @@ nonzero = Check("a nonzero number", lambda a: isinstance(a, float) and a != 0)
 def matches(expected, actual, tolerance):
     if isinstance(expected, Check):
         return expected(actual)
+    # LibreOffice types a cached formula result from the format it infers for
+    # the cell, so a TRUE can come back as 1 and a 0 as FALSE. Compare by value.
+    if (isinstance(expected, (bool, int, float)) and isinstance(actual, (bool, float))
+            and isinstance(expected, bool) != isinstance(actual, bool)):
+        return abs(float(actual) - float(expected)) <= tolerance
     if isinstance(expected, (int, float)) and not isinstance(expected, bool):
         return isinstance(actual, float) and abs(actual - expected) <= tolerance
     return str(actual) == str(expected)

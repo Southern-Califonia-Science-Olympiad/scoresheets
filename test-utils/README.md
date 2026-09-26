@@ -86,6 +86,18 @@ is column `BM` on that school's row, and `"AE{unused}"` is a data row with no
 team on it. A ref with no placeholder is absolute, for cells that don't move
 with the teams (field maxima in row 6, a rankings list filled from the top).
 
+To check every team in a scenario on the same cells, build `expect` with
+`table(fields, rows)`: one tuple of output names, then one tuple of expected
+values per school. A row with the wrong number of values raises, so no team can
+quietly skip a column:
+
+```python
+expect=table(("score", "rank"), {
+    "Winner": (97, 1),
+    "Runner": (80, 2),
+})
+```
+
 Floats compare with a tolerance (`SheetSpec(tolerance=...)`, default `1e-6`).
 An expected value of `""` matches a blank or absent cell. Error values come back
 as their text, so `#DIV/0!` compares as a string.
@@ -95,6 +107,12 @@ literal. `runner` provides `is_number` (computed, not an error) and `nonzero`;
 build others as `Check("description", predicate)`. To assert on a cell outside
 the per-team output columns — a field maximum, say — add a labeled entry to
 `extra`: `("max PE", "AL6", nonzero)`.
+
+Inputs that sit outside the team rows — a target time every team is scored
+against, say — go in `cells`: `Scenario(..., cells={"D8": 10})`. They are
+written after the data range is blanked; `None` blanks the cell. A global cell
+not named in `cells` keeps whatever the workbook holds, so set it in every
+scenario whose results depend on it.
 
 Every input cell in the data range is blanked before a scenario is written, so
 leftover teams in the workbook don't leak into results.

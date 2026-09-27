@@ -42,7 +42,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "test-utils"))
 
-from runner import Scenario, SheetSpec, main, table  # noqa: E402
+from runner import Scenario, SheetSpec, main  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_SHEET = HERE.parent / "scoresheet_c.xlsx"
@@ -103,6 +103,22 @@ TT14 = {TARGET_TIME: 14}
 FAILED = 2607
 
 
+def keyed(rows):
+    """A Scenario's `expect`, keyed by output name: {school: dict(...)}.
+
+    Every team in a scenario must check the same outputs, so a team can't pass
+    by leaving one out; a mismatch raises when the suite loads.
+    """
+    fields = None
+    for school, row in rows.items():
+        if fields is None:
+            fields = set(row)
+        elif set(row) != fields:
+            raise ValueError("%s checks %s, others check %s"
+                             % (school, sorted(row), sorted(fields)))
+    return rows
+
+
 def run(n, **kw):
     """Inputs for run n. Boxes left out stay blank."""
     return {"%s%d" % (k, n): v for k, v in kw.items() if v is not None}
@@ -135,8 +151,6 @@ def bare(school):
 # Scenarios
 # --------------------------------------------------------------------------
 
-RUN1 = ("r1_ds", "r1_ts", "r1_bottle", "r1_pusher", "r1_pen", "r1")
-RUN2 = ("r2_ds", "r2_ts", "r2_bottle", "r2_pusher", "r2_pen", "r2")
 
 RULES_EXAMPLE = Scenario(
     "rules_example",
@@ -147,10 +161,12 @@ RULES_EXAMPLE = Scenario(
              run(2, sf=S, time=16.37, vd=22.5, bd=12.1, bonus="T"),
              pusher=16),
     ],
-    expect=table(RUN1 + RUN2 + ("scored", "run_score", "final", "status"), {
-        "Example": (45.8, 0.865, 0, -28.5, 0, 118.165,
-                    57.1, 1.185, -20, -28.5, 0, 109.785,
-                    "->", 109.785, 109.785, "C"),
+    expect=keyed({
+        "Example": dict(
+            r1_ds=45.8, r1_ts=0.865, r1_bottle=0, r1_pusher=-28.5, r1_pen=0, r1=118.165,
+            r2_ds=57.1, r2_ts=1.185, r2_bottle=-20, r2_pusher=-28.5, r2_pen=0, r2=109.785,
+            scored="->", run_score=109.785, final=109.785, status="C",
+        ),
     }),
     cells=TT14,
 )
@@ -174,17 +190,39 @@ FAILED_RUNS = Scenario(
         team("FailedViolLoser", run(1, sf=F, comp="F"), run(2, sf=F, comp="F"), pusher=30),
         team("FailedViolWinner", run(1, sf=F, comp="F"), run(2, sf=F, comp="F"), pusher=10),
     ],
-    expect=table(RUN1 + ("r2", "final", "tb4", "rank", "rank_tb", "errors"), {
-        "BothFailed":       (2500, 7, 0, 0, 0, FAILED, FAILED, FAILED, "", 2, 2, ""),
-        "NoRuns":           (2500, 7, 0, 0, 0, FAILED, FAILED, FAILED, "", 2, 2, ""),
-        "FailedWithData":   (2500, 7, 0, 0, 0, FAILED, FAILED, FAILED, "", 2, 2, ""),
-        "InferredSuccess":  (30, 0, 0, 0, 0, 130, FAILED, 130, 35, 1, 1, ""),
-        "TiedA":            (2500, 7, 0, 0, 0, FAILED, FAILED, FAILED, "", 2, 2, ""),
-        "TiedB":            (2500, 7, 0, 0, 0, FAILED, FAILED, FAILED, "", 2, 2, ""),
-        "FailedViolLoser":  (2500, 7, 0, 0, 150, FAILED + 150, FAILED + 150, FAILED + 150,
-                             30, 7, 8, ""),
-        "FailedViolWinner": (2500, 7, 0, 0, 150, FAILED + 150, FAILED + 150, FAILED + 150,
-                             10, 7, 7, ""),
+    expect=keyed({
+        "BothFailed": dict(
+            r1_ds=2500, r1_ts=7, r1_bottle=0, r1_pusher=0, r1_pen=0, r1=FAILED, r2=FAILED,
+            final=FAILED, tb4="", rank=2, rank_tb=2, errors="",
+        ),
+        "NoRuns": dict(
+            r1_ds=2500, r1_ts=7, r1_bottle=0, r1_pusher=0, r1_pen=0, r1=FAILED, r2=FAILED,
+            final=FAILED, tb4="", rank=2, rank_tb=2, errors="",
+        ),
+        "FailedWithData": dict(
+            r1_ds=2500, r1_ts=7, r1_bottle=0, r1_pusher=0, r1_pen=0, r1=FAILED, r2=FAILED,
+            final=FAILED, tb4="", rank=2, rank_tb=2, errors="",
+        ),
+        "InferredSuccess": dict(
+            r1_ds=30, r1_ts=0, r1_bottle=0, r1_pusher=0, r1_pen=0, r1=130, r2=FAILED, final=130,
+            tb4=35, rank=1, rank_tb=1, errors="",
+        ),
+        "TiedA": dict(
+            r1_ds=2500, r1_ts=7, r1_bottle=0, r1_pusher=0, r1_pen=0, r1=FAILED, r2=FAILED,
+            final=FAILED, tb4="", rank=2, rank_tb=2, errors="",
+        ),
+        "TiedB": dict(
+            r1_ds=2500, r1_ts=7, r1_bottle=0, r1_pusher=0, r1_pen=0, r1=FAILED, r2=FAILED,
+            final=FAILED, tb4="", rank=2, rank_tb=2, errors="",
+        ),
+        "FailedViolLoser": dict(
+            r1_ds=2500, r1_ts=7, r1_bottle=0, r1_pusher=0, r1_pen=150, r1=FAILED + 150,
+            r2=FAILED + 150, final=FAILED + 150, tb4=30, rank=7, rank_tb=8, errors="",
+        ),
+        "FailedViolWinner": dict(
+            r1_ds=2500, r1_ts=7, r1_bottle=0, r1_pusher=0, r1_pen=150, r1=FAILED + 150,
+            r2=FAILED + 150, final=FAILED + 150, tb4=10, rank=7, rank_tb=7, errors="",
+        ),
     }),
     cells=TT14,
 )
@@ -205,15 +243,39 @@ BOTTLE_PAST_TARGET = Scenario(
         team("Run2NotPast", run(1, sf=F), run(2, sf=S, time=14, vd=10, past="F")),
         team("PastMissingBd", run(1, sf=S, time=14, vd=10, past="T")),
     ],
-    expect=table(("r1_ds", "r1_bottle", "r1", "r2_ds", "r2_bottle", "r2", "final", "status", "errors"), {
-        "Past":          (30, 0, 130, 2500, 0, FAILED, 130, "C", ""),
-        "PastBlank":     (30, 0, 130, 2500, 0, FAILED, 130, "C", ""),
-        "NotPast":       (420, 0, 520, 2500, 0, FAILED, 520, "C", ""),
-        "NotPastWithBd": (420, 0, 520, 2500, 0, FAILED, 520, "C", ""),
-        "NotPastBonus":  (420, 0, 520, 2500, 0, FAILED, 520, "C", ""),
-        "Run2NotPastBonus": (410, 0, 510, 420, 0, 520, 510, "C", ""),
-        "Run2NotPast":   (2500, 0, FAILED, 420, 0, 520, 520, "C", ""),
-        "PastMissingBd": ("", "", "", "", "", "", "ERR", "ERR", ""),
+    expect=keyed({
+        "Past": dict(
+            r1_ds=30, r1_bottle=0, r1=130, r2_ds=2500, r2_bottle=0, r2=FAILED, final=130,
+            status="C", errors="",
+        ),
+        "PastBlank": dict(
+            r1_ds=30, r1_bottle=0, r1=130, r2_ds=2500, r2_bottle=0, r2=FAILED, final=130,
+            status="C", errors="",
+        ),
+        "NotPast": dict(
+            r1_ds=420, r1_bottle=0, r1=520, r2_ds=2500, r2_bottle=0, r2=FAILED, final=520,
+            status="C", errors="",
+        ),
+        "NotPastWithBd": dict(
+            r1_ds=420, r1_bottle=0, r1=520, r2_ds=2500, r2_bottle=0, r2=FAILED, final=520,
+            status="C", errors="",
+        ),
+        "NotPastBonus": dict(
+            r1_ds=420, r1_bottle=0, r1=520, r2_ds=2500, r2_bottle=0, r2=FAILED, final=520,
+            status="C", errors="",
+        ),
+        "Run2NotPastBonus": dict(
+            r1_ds=410, r1_bottle=0, r1=510, r2_ds=420, r2_bottle=0, r2=520, final=510, status="C",
+            errors="",
+        ),
+        "Run2NotPast": dict(
+            r1_ds=2500, r1_bottle=0, r1=FAILED, r2_ds=420, r2_bottle=0, r2=520, final=520,
+            status="C", errors="",
+        ),
+        "PastMissingBd": dict(
+            r1_ds="", r1_bottle="", r1="", r2_ds="", r2_bottle="", r2="", final="ERR",
+            status="ERR", errors="",
+        ),
     }),
     cells=TT14,
 )
@@ -233,16 +295,40 @@ PENALTIES = Scenario(
         team("Run2Comp", ok(1), ok(2, comp="F")),
         team("Lithium", ok(1), battery="F"),
     ],
-    expect=table(("r1_pen", "r1", "r2_pen", "r2", "scored", "final_pen", "final", "status"), {
-        "Clean":      (0, 130, 0, FAILED, "<-", 0, 130, "C"),
-        "Comp":       (150, 280, 0, FAILED, "<-", 0, 280, "C"),
-        "Const":      (300, 430, 0, FAILED, "<-", 0, 430, "C"),
-        "CompConst":  (450, 580, 0, FAILED, "<-", 0, 580, "C"),
-        "Kit":        (50, 180, 50, FAILED + 50, "<-", 0, 180, "C"),
-        "NoImpound":  (0, 130, 0, FAILED, "<-", 5000, 5130, "C"),
-        "FailedComp": (150, FAILED + 150, 0, FAILED, "->", 0, FAILED, "C"),
-        "Run2Comp":   (0, 130, 150, 280, "<-", 0, 130, "C"),
-        "Lithium":    ("", "", "", "", "", "", "P", "P"),
+    expect=keyed({
+        "Clean": dict(
+            r1_pen=0, r1=130, r2_pen=0, r2=FAILED, scored="<-", final_pen=0, final=130, status="C",
+        ),
+        "Comp": dict(
+            r1_pen=150, r1=280, r2_pen=0, r2=FAILED, scored="<-", final_pen=0, final=280,
+            status="C",
+        ),
+        "Const": dict(
+            r1_pen=300, r1=430, r2_pen=0, r2=FAILED, scored="<-", final_pen=0, final=430,
+            status="C",
+        ),
+        "CompConst": dict(
+            r1_pen=450, r1=580, r2_pen=0, r2=FAILED, scored="<-", final_pen=0, final=580,
+            status="C",
+        ),
+        "Kit": dict(
+            r1_pen=50, r1=180, r2_pen=50, r2=FAILED + 50, scored="<-", final_pen=0, final=180,
+            status="C",
+        ),
+        "NoImpound": dict(
+            r1_pen=0, r1=130, r2_pen=0, r2=FAILED, scored="<-", final_pen=5000, final=5130,
+            status="C",
+        ),
+        "FailedComp": dict(
+            r1_pen=150, r1=FAILED + 150, r2_pen=0, r2=FAILED, scored="->", final_pen=0,
+            final=FAILED, status="C",
+        ),
+        "Run2Comp": dict(
+            r1_pen=0, r1=130, r2_pen=150, r2=280, scored="<-", final_pen=0, final=130, status="C",
+        ),
+        "Lithium": dict(
+            r1_pen="", r1="", r2_pen="", r2="", scored="", final_pen="", final="P", status="P",
+        ),
     }),
     cells=TT14,
 )
@@ -257,11 +343,11 @@ EVENT_TIME = Scenario(
         team("NoneLeft", ok(1)),
         team("OverEight", ok(1), left_min=9),
     ],
-    expect=table(("etb", "final", "rank"), {
-        "TwoMinLeft":    (-4, 126, 2),
-        "ThirtySecLeft": (-1, 129, 3),
-        "NoneLeft":      (0, 130, 4),
-        "OverEight":     (-16, 114, 1),
+    expect=keyed({
+        "TwoMinLeft":    dict(etb=-4, final=126, rank=2),
+        "ThirtySecLeft": dict(etb=-1, final=129, rank=3),
+        "NoneLeft":      dict(etb=0, final=130, rank=4),
+        "OverEight":     dict(etb=-16, final=114, rank=1),
     }),
     cells=TT14,
 )
@@ -287,18 +373,47 @@ TIEBREAKS = Scenario(
         team("TieA", ok(1, vd=10, bd=40)),
         team("TieB", ok(1, vd=10, bd=40)),
     ],
-    expect=table(("final", "tb1", "tb2", "tb3", "tb4", "rank", "rank_tb", "rank_diff",
-                  "exp_rank", "exp_tiebreak", "points"), {
-        "TB1Loser":  (130, 30, 0, 10, 35, 1, 2, -1, 2, -1, 2),
-        "TB1Winner": (130, 28, 2, 10, 35, 1, 1, 0, 1, 0, 1),
-        "TB2Loser":  (186, 36, 50, 10, 35, 9, 10, -1, 10, -1, 10),
-        "TB2Winner": (186, 36, 0, 13, 35, 9, 9, 0, 9, 0, 9),
-        "TB3Loser":  (140, 40, 0, 15, 35, 3, 4, -1, 4, -1, 4),
-        "TB3Winner": (140, 40, 0, 10, 35, 3, 3, 0, 3, 0, 3),
-        "TB4Loser":  (150, 50, 0, 10, 35, 5, 6, -1, 6, -1, 6),
-        "TB4Winner": (150, 50, 0, 10, 15, 5, 5, 0, 5, 0, 5),
-        "TieA":      (160, 50 + 10, 0, 10, 35, 7, 7, 0, 7, 0, 7),
-        "TieB":      (160, 50 + 10, 0, 10, 35, 7, 7, 0, 7, 0, 7),
+    expect=keyed({
+        "TB1Loser": dict(
+            final=130, tb1=30, tb2=0, tb3=10, tb4=35, rank=1, rank_tb=2, rank_diff=-1, exp_rank=2,
+            exp_tiebreak=-1, points=2,
+        ),
+        "TB1Winner": dict(
+            final=130, tb1=28, tb2=2, tb3=10, tb4=35, rank=1, rank_tb=1, rank_diff=0, exp_rank=1,
+            exp_tiebreak=0, points=1,
+        ),
+        "TB2Loser": dict(
+            final=186, tb1=36, tb2=50, tb3=10, tb4=35, rank=9, rank_tb=10, rank_diff=-1,
+            exp_rank=10, exp_tiebreak=-1, points=10,
+        ),
+        "TB2Winner": dict(
+            final=186, tb1=36, tb2=0, tb3=13, tb4=35, rank=9, rank_tb=9, rank_diff=0, exp_rank=9,
+            exp_tiebreak=0, points=9,
+        ),
+        "TB3Loser": dict(
+            final=140, tb1=40, tb2=0, tb3=15, tb4=35, rank=3, rank_tb=4, rank_diff=-1, exp_rank=4,
+            exp_tiebreak=-1, points=4,
+        ),
+        "TB3Winner": dict(
+            final=140, tb1=40, tb2=0, tb3=10, tb4=35, rank=3, rank_tb=3, rank_diff=0, exp_rank=3,
+            exp_tiebreak=0, points=3,
+        ),
+        "TB4Loser": dict(
+            final=150, tb1=50, tb2=0, tb3=10, tb4=35, rank=5, rank_tb=6, rank_diff=-1, exp_rank=6,
+            exp_tiebreak=-1, points=6,
+        ),
+        "TB4Winner": dict(
+            final=150, tb1=50, tb2=0, tb3=10, tb4=15, rank=5, rank_tb=5, rank_diff=0, exp_rank=5,
+            exp_tiebreak=0, points=5,
+        ),
+        "TieA": dict(
+            final=160, tb1=60, tb2=0, tb3=10, tb4=35, rank=7, rank_tb=7, rank_diff=0,
+            exp_rank=7, exp_tiebreak=0, points=7,
+        ),
+        "TieB": dict(
+            final=160, tb1=60, tb2=0, tb3=10, tb4=35, rank=7, rank_tb=7, rank_diff=0,
+            exp_rank=7, exp_tiebreak=0, points=7,
+        ),
     }),
     cells=TT14,
 )
@@ -318,16 +433,35 @@ SCORED_RUN = Scenario(
         team("EqualLowerVD1", ok(1, vd=10, bd=20), ok(2, vd=15, bd=10)),
         team("EqualLowerVD2", ok(1, vd=15, bd=10), ok(2, vd=10, bd=20)),
     ],
-    expect=table(("r1", "r2", "r1_tb1", "r1_tb2", "r1_tb3", "r1_tb4",
-                  "r2_tb1", "r2_tb2", "r2_tb3", "r2_tb4",
-                  "scored", "run_score", "tb1", "tb2", "tb3", "tb4"), {
-        "Run2Better":    (140, 130, 40, 0, 10, 35, 30, 0, 10, 35, "->", 130, 30, 0, 10, 35),
-        "Run1Better":    (130, 140, 30, 0, 10, 35, 40, 0, 10, 35, "<-", 130, 30, 0, 10, 35),
-        "EqualLowerDS":  (140, 140, 40, 0, 10, 35, 30, 10, 10, 35, "->", 140, 30, 10, 10, 35),
-        "Identical":     (130, 130, 30, 0, 10, 35, 30, 0, 10, 35, "<-", 130, 30, 0, 10, 35),
-        "FailThenOK":    (FAILED, 130, 2500, 7, "", 35, 30, 0, 10, 35, "->", 130, 30, 0, 10, 35),
-        "EqualLowerVD1": (140, 140, 40, 0, 10, 35, 40, 0, 15, 35, "<-", 140, 40, 0, 10, 35),
-        "EqualLowerVD2": (140, 140, 40, 0, 15, 35, 40, 0, 10, 35, "->", 140, 40, 0, 10, 35),
+    expect=keyed({
+        "Run2Better": dict(
+            r1=140, r2=130, r1_tb1=40, r1_tb2=0, r1_tb3=10, r1_tb4=35, r2_tb1=30, r2_tb2=0,
+            r2_tb3=10, r2_tb4=35, scored="->", run_score=130, tb1=30, tb2=0, tb3=10, tb4=35,
+        ),
+        "Run1Better": dict(
+            r1=130, r2=140, r1_tb1=30, r1_tb2=0, r1_tb3=10, r1_tb4=35, r2_tb1=40, r2_tb2=0,
+            r2_tb3=10, r2_tb4=35, scored="<-", run_score=130, tb1=30, tb2=0, tb3=10, tb4=35,
+        ),
+        "EqualLowerDS": dict(
+            r1=140, r2=140, r1_tb1=40, r1_tb2=0, r1_tb3=10, r1_tb4=35, r2_tb1=30, r2_tb2=10,
+            r2_tb3=10, r2_tb4=35, scored="->", run_score=140, tb1=30, tb2=10, tb3=10, tb4=35,
+        ),
+        "Identical": dict(
+            r1=130, r2=130, r1_tb1=30, r1_tb2=0, r1_tb3=10, r1_tb4=35, r2_tb1=30, r2_tb2=0,
+            r2_tb3=10, r2_tb4=35, scored="<-", run_score=130, tb1=30, tb2=0, tb3=10, tb4=35,
+        ),
+        "FailThenOK": dict(
+            r1=FAILED, r2=130, r1_tb1=2500, r1_tb2=7, r1_tb3="", r1_tb4=35, r2_tb1=30, r2_tb2=0,
+            r2_tb3=10, r2_tb4=35, scored="->", run_score=130, tb1=30, tb2=0, tb3=10, tb4=35,
+        ),
+        "EqualLowerVD1": dict(
+            r1=140, r2=140, r1_tb1=40, r1_tb2=0, r1_tb3=10, r1_tb4=35, r2_tb1=40, r2_tb2=0,
+            r2_tb3=15, r2_tb4=35, scored="<-", run_score=140, tb1=40, tb2=0, tb3=10, tb4=35,
+        ),
+        "EqualLowerVD2": dict(
+            r1=140, r2=140, r1_tb1=40, r1_tb2=0, r1_tb3=15, r1_tb4=35, r2_tb1=40, r2_tb2=0,
+            r2_tb3=10, r2_tb4=35, scored="->", run_score=140, tb1=40, tb2=0, tb3=10, tb4=35,
+        ),
     }),
     cells=TT14,
 )
@@ -342,12 +476,21 @@ STATUSES = Scenario(
         team("Lithium", battery="F"),
         team("Errored", run(1, sf=S)),
     ],
-    expect=table(("status", "exp_score", "tier", "exp_tier", "exp_rank", "points"), {
-        "Competitor":   ("C", 130, 1, 1, 1, 1),
-        "Disqualified": ("DQ", "DQ", "DQ", "DQ", "DQ", 7),
-        "NoShow":       ("NS", "NS", "NS", "NS", "NS", 6),
-        "Lithium":      ("P", "P", "P", "P", "P", 5),
-        "Errored":      ("ERR", "ERR", "ERR", "ERR", "ERR", "ERR"),
+    expect=keyed({
+        "Competitor":   dict(status="C", exp_score=130, tier=1, exp_tier=1, exp_rank=1, points=1),
+        "Disqualified": dict(
+            status="DQ", exp_score="DQ", tier="DQ", exp_tier="DQ", exp_rank="DQ", points=7,
+        ),
+        "NoShow": dict(
+            status="NS", exp_score="NS", tier="NS", exp_tier="NS", exp_rank="NS", points=6,
+        ),
+        "Lithium": dict(
+            status="P", exp_score="P", tier="P", exp_tier="P", exp_rank="P", points=5,
+        ),
+        "Errored": dict(
+            status="ERR", exp_score="ERR", tier="ERR", exp_tier="ERR", exp_rank="ERR",
+            points="ERR",
+        ),
     }),
     extra=[
         ("blank row status", "BZ{unused}", ""),
@@ -377,16 +520,28 @@ INPUT_ERRORS = Scenario(
         team("Clean", ok(1)),
         team("Clean2", ok(1, bd=20)),
     ],
-    expect=table(("status", "errors", "exp_score", "exp_rank", "points"), {
-        "MissingBottle":   ("ERR", "", "ERR", "ERR", "ERR"),
-        "SOnly":           ("ERR", "", "ERR", "ERR", "ERR"),
-        "InferredPartial": ("ERR", "", "ERR", "ERR", "ERR"),
-        "Negative":        ("ERR", "", "ERR", "ERR", "ERR"),
-        "BothRuns":        ("ERR", "", "ERR", "ERR", "ERR"),
-        "Run2Only":        ("ERR", "", "ERR", "ERR", "ERR"),
-        "FailedEmpty":     ("C", "", FAILED, 3, 3),
-        "Clean":           ("C", "", 130, 1, 1),
-        "Clean2":          ("C", "", 140, 2, 2),
+    expect=keyed({
+        "MissingBottle": dict(
+            status="ERR", errors="", exp_score="ERR", exp_rank="ERR", points="ERR",
+        ),
+        "SOnly": dict(
+            status="ERR", errors="", exp_score="ERR", exp_rank="ERR", points="ERR",
+        ),
+        "InferredPartial": dict(
+            status="ERR", errors="", exp_score="ERR", exp_rank="ERR", points="ERR",
+        ),
+        "Negative": dict(
+            status="ERR", errors="", exp_score="ERR", exp_rank="ERR", points="ERR",
+        ),
+        "BothRuns": dict(
+            status="ERR", errors="", exp_score="ERR", exp_rank="ERR", points="ERR",
+        ),
+        "Run2Only": dict(
+            status="ERR", errors="", exp_score="ERR", exp_rank="ERR", points="ERR",
+        ),
+        "FailedEmpty":     dict(status="C", errors="", exp_score=FAILED, exp_rank=3, points=3),
+        "Clean":           dict(status="C", errors="", exp_score=130, exp_rank=1, points=1),
+        "Clean2":          dict(status="C", errors="", exp_score=140, exp_rank=2, points=2),
     }),
     extra=[
         ("errors header (no counter)", "CS8", "Errors"),
@@ -410,12 +565,12 @@ TARGET_TIME_MISSING = Scenario(
         bare("NoShow"),
         team("Lithium", battery="F"),
     ],
-    expect=table(("status", "errors", "exp_rank", "points"), {
-        "Competitor":   ("ERR", ERR_TT, "ERR", "ERR"),
-        "Failed":       ("ERR", ERR_TT, "ERR", "ERR"),
-        "Disqualified": ("DQ", "", "DQ", 7),
-        "NoShow":       ("NS", "", "NS", 6),
-        "Lithium":      ("P", "", "P", 5),
+    expect=keyed({
+        "Competitor":   dict(status="ERR", errors=ERR_TT, exp_rank="ERR", points="ERR"),
+        "Failed":       dict(status="ERR", errors=ERR_TT, exp_rank="ERR", points="ERR"),
+        "Disqualified": dict(status="DQ", errors="", exp_rank="DQ", points=7),
+        "NoShow":       dict(status="NS", errors="", exp_rank="NS", points=6),
+        "Lithium":      dict(status="P", errors="", exp_rank="P", points=5),
     }),
     cells={TARGET_TIME: None},
 )
@@ -424,7 +579,7 @@ TARGET_TIME_TEXT = Scenario(
     "target_time_text",
     "A non-numeric Target Time has its own message.",
     teams=[team("Competitor", ok(1))],
-    expect=table(("status", "errors"), {"Competitor": ("ERR", ERR_TT_TEXT)}),
+    expect=keyed({"Competitor": dict(status="ERR", errors=ERR_TT_TEXT)}),
     cells={TARGET_TIME: "fourteen"},
 )
 
@@ -443,15 +598,17 @@ BREAKDOWN = Scenario(
         team("Disqualified", ok(1), dq="T"),
         team("Errored", run(1, sf=S)),
     ],
-    expect=table(("bd_run", "bd_ds", "bd_ts", "bd_bonus", "bd_pen", "final"), {
-        "Example":      (2, 57.1, 1.185, -48.5, 0, 109.785),
+    expect=keyed({
+        "Example": dict(
+            bd_run=2, bd_ds=57.1, bd_ts=1.185, bd_bonus=-48.5, bd_pen=0, final=109.785,
+        ),
         # run 1: 130 + 150 + 50 = 330; run 2: 140 + 50 = 190 -> run 2, + 5000
-        "Penalised":    (2, 40, 0, 0, 5050, 5190),
-        "TimeLeft":     (1, 30, 0, -2, 0, 128),
+        "Penalised":    dict(bd_run=2, bd_ds=40, bd_ts=0, bd_bonus=0, bd_pen=5050, final=5190),
+        "TimeLeft":     dict(bd_run=1, bd_ds=30, bd_ts=0, bd_bonus=-2, bd_pen=0, final=128),
         # run 2 (2607) beats run 1 (2907)
-        "DoubleFailed": (2, 2500, 7, 0, 0, FAILED),
-        "Disqualified": ("", "", "", "", "", "DQ"),
-        "Errored":      ("", "", "", "", "", "ERR"),
+        "DoubleFailed": dict(bd_run=2, bd_ds=2500, bd_ts=7, bd_bonus=0, bd_pen=0, final=FAILED),
+        "Disqualified": dict(bd_run="", bd_ds="", bd_ts="", bd_bonus="", bd_pen="", final="DQ"),
+        "Errored":      dict(bd_run="", bd_ds="", bd_ts="", bd_bonus="", bd_pen="", final="ERR"),
     }),
     cells=TT14,
 )

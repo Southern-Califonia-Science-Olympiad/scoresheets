@@ -71,23 +71,26 @@ for _n, _cols in RUN_COLS.items():
 OUT_COLS = {
     "r1_err": "BB", "r1_ds": "BC", "r1_ts": "BD", "r1_bottle": "BE",
     "r1_pusher": "BF", "r1_pen": "BG", "r1": "BH",
-    "scored": "BI",
-    "r2_err": "BJ", "r2_ds": "BK", "r2_ts": "BL", "r2_bottle": "BM",
-    "r2_pusher": "BN", "r2_pen": "BO", "r2": "BP",
-    "status": "BR", "tier": "BS", "run_score": "BT", "final_pen": "BU",
-    "etb": "BV", "final": "BW", "rank": "BX",
-    "tb1": "BY", "tb2": "CA", "tb3": "CC", "tb4": "CE",
-    "rank_tb": "CG", "rank_diff": "CH",
-    "errors": "CK",
+    "scored": "BM",
+    "r2_err": "BN", "r2_ds": "BO", "r2_ts": "BP", "r2_bottle": "BQ",
+    "r2_pusher": "BR", "r2_pen": "BS", "r2": "BT",
+    # each run's own tiebreaks: DS, TS, vehicle distance, pusher measurement
+    "r1_tb1": "BI", "r1_tb2": "BJ", "r1_tb3": "BK", "r1_tb4": "BL",
+    "r2_tb1": "BU", "r2_tb2": "BV", "r2_tb3": "BW", "r2_tb4": "BX",
+    "status": "BZ", "tier": "CA", "run_score": "CB", "final_pen": "CC",
+    "etb": "CD", "final": "CE", "rank": "CF",
+    "tb1": "CG", "tb2": "CI", "tb3": "CK", "tb4": "CM",
+    "rank_tb": "CO", "rank_diff": "CP",
+    "errors": "CS",
     # Breakdown of the scored run: run #, DS, TS, bonuses (bottle + pusher +
     # event time), penalties (run + impound). Final = 100 + DS + TS + B + P.
-    "bd_run": "CL", "bd_ds": "CM", "bd_ts": "CN", "bd_bonus": "CO", "bd_pen": "CP",
-    "exp_score": "CQ", "exp_tier": "CR", "exp_tiebreak": "CS", "exp_rank": "CT",
-    "points": "CU",
+    "bd_run": "CT", "bd_ds": "CU", "bd_ts": "CV", "bd_bonus": "CW", "bd_pen": "CX",
+    "exp_score": "CY", "exp_tier": "CZ", "exp_tiebreak": "DA", "exp_rank": "DB",
+    "points": "DC",
 }
 
-LISTED = "CW8"          # teams on the final rankings list
-LIST_SCHOOL = "DI%d"    # final rankings: school, list starting on row 9
+LISTED = "DE8"          # teams on the final rankings list
+LIST_SCHOOL = "DQ%d"    # final rankings: school, list starting on row 9
 
 SPEC = SheetSpec(INPUT_COLS, OUT_COLS, first_row=9, last_row=508)
 
@@ -302,7 +305,8 @@ TIEBREAKS = Scenario(
 
 SCORED_RUN = Scenario(
     "scored_run",
-    "The better Run Score counts; equal runs fall back to lower DS, then TS.",
+    "The better Run Score counts; equal runs fall back to each run's own "
+    "tiebreaks: lower DS, then TS, then Vehicle Distance, then pusher.",
     teams=[
         team("Run2Better", ok(1, bd=20), ok(2)),
         team("Run1Better", ok(1), ok(2, bd=20)),
@@ -310,13 +314,20 @@ SCORED_RUN = Scenario(
         team("EqualLowerDS", ok(1, bd=20), ok(2, time=34)),
         team("Identical", ok(1), ok(2)),
         team("FailThenOK", run(1, sf=F), ok(2)),
+        # 140 each with DS 40 and TS 0: TB3, the shorter Vehicle Distance, picks.
+        team("EqualLowerVD1", ok(1, vd=10, bd=20), ok(2, vd=15, bd=10)),
+        team("EqualLowerVD2", ok(1, vd=15, bd=10), ok(2, vd=10, bd=20)),
     ],
-    expect=table(("r1", "r2", "scored", "run_score", "tb1", "tb2", "tb3"), {
-        "Run2Better":   (140, 130, "->", 130, 30, 0, 10),
-        "Run1Better":   (130, 140, "<-", 130, 30, 0, 10),
-        "EqualLowerDS": (140, 140, "->", 140, 30, 10, 10),
-        "Identical":    (130, 130, "<-", 130, 30, 0, 10),
-        "FailThenOK":   (FAILED, 130, "->", 130, 30, 0, 10),
+    expect=table(("r1", "r2", "r1_tb1", "r1_tb2", "r1_tb3", "r1_tb4",
+                  "r2_tb1", "r2_tb2", "r2_tb3", "r2_tb4",
+                  "scored", "run_score", "tb1", "tb2", "tb3", "tb4"), {
+        "Run2Better":    (140, 130, 40, 0, 10, 35, 30, 0, 10, 35, "->", 130, 30, 0, 10, 35),
+        "Run1Better":    (130, 140, 30, 0, 10, 35, 40, 0, 10, 35, "<-", 130, 30, 0, 10, 35),
+        "EqualLowerDS":  (140, 140, 40, 0, 10, 35, 30, 10, 10, 35, "->", 140, 30, 10, 10, 35),
+        "Identical":     (130, 130, 30, 0, 10, 35, 30, 0, 10, 35, "<-", 130, 30, 0, 10, 35),
+        "FailThenOK":    (FAILED, 130, 2500, 7, "", 35, 30, 0, 10, 35, "->", 130, 30, 0, 10, 35),
+        "EqualLowerVD1": (140, 140, 40, 0, 10, 35, 40, 0, 15, 35, "<-", 140, 40, 0, 10, 35),
+        "EqualLowerVD2": (140, 140, 40, 0, 15, 35, 40, 0, 10, 35, "->", 140, 40, 0, 10, 35),
     }),
     cells=TT14,
 )
@@ -339,8 +350,8 @@ STATUSES = Scenario(
         "Errored":      ("ERR", "ERR", "ERR", "ERR", "ERR", "ERR"),
     }),
     extra=[
-        ("blank row status", "BR{unused}", ""),
-        ("blank row score", "CL{unused}", ""),
+        ("blank row status", "BZ{unused}", ""),
+        ("blank row score", "CY{unused}", ""),
         ("listed teams", LISTED, 4),
         ("1st", LIST_SCHOOL % 9, "Competitor"),
         ("2nd", LIST_SCHOOL % 10, "Lithium"),
@@ -378,7 +389,7 @@ INPUT_ERRORS = Scenario(
         "Clean2":          ("C", "", 140, 2, 2),
     }),
     extra=[
-        ("errors header (no counter)", "CK8", "Errors"),
+        ("errors header (no counter)", "CS8", "Errors"),
         ("listed teams", LISTED, 3),
         ("1st", LIST_SCHOOL % 9, "Clean"),
         ("2nd", LIST_SCHOOL % 10, "Clean2"),

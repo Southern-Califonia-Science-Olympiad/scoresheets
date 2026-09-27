@@ -29,8 +29,8 @@ Rules under test (2027 C rules, section 5; low score wins):
     Successful when the run has any measurement, otherwise Failed.
   - Lithium/lead batteries: participation only (P).
   - Ties: lower Distance Score of the scored run, lower Time Score, shorter
-    Vehicle Distance, lower Bottle Pusher measurement -- except two Failed
-    Runs with no competition or construction violations stay tied (5.k).
+    Vehicle Distance, lower Bottle Pusher measurement. The pusher tiebreak
+    applies to every team, double-failed ones included.
   - A Successful run missing its Run Time, Vehicle or Bottle Distance, or no
     Target Time, makes the team ERR: not scored, ranked or listed. Only the
     Target Time has an Errors-column message; a missing measurement is shown
@@ -71,26 +71,27 @@ for _n, _cols in RUN_COLS.items():
 OUT_COLS = {
     "r1_err": "BB", "r1_ds": "BC", "r1_ts": "BD", "r1_bottle": "BE",
     "r1_pusher": "BF", "r1_pen": "BG", "r1": "BH",
-    "scored": "BM",
-    "r2_err": "BN", "r2_ds": "BO", "r2_ts": "BP", "r2_bottle": "BQ",
-    "r2_pusher": "BR", "r2_pen": "BS", "r2": "BT",
-    # each run's own tiebreaks: DS, TS, vehicle distance, pusher measurement
-    "r1_tb1": "BI", "r1_tb2": "BJ", "r1_tb3": "BK", "r1_tb4": "BL",
-    "r2_tb1": "BU", "r2_tb2": "BV", "r2_tb3": "BW", "r2_tb4": "BX",
-    "status": "BZ", "tier": "CA", "run_score": "CB", "final_pen": "CC",
-    "etb": "CD", "final": "CE", "rank": "CF",
-    "tb1": "CG", "tb2": "CI", "tb3": "CK", "tb4": "CM",
-    "rank_tb": "CO", "rank_diff": "CP",
-    "errors": "CS",
+    "scored": "BL",
+    "r2_err": "BM", "r2_ds": "BN", "r2_ts": "BO", "r2_bottle": "BP",
+    "r2_pusher": "BQ", "r2_pen": "BR", "r2": "BS",
+    # each run's own tiebreaks: DS, TS, vehicle distance (the pusher measurement
+    # is the same on both runs, so it can't pick between them)
+    "r1_tb1": "BI", "r1_tb2": "BJ", "r1_tb3": "BK",
+    "r2_tb1": "BT", "r2_tb2": "BU", "r2_tb3": "BV",
+    "status": "BX", "tier": "BY", "run_score": "BZ", "final_pen": "CA",
+    "etb": "CB", "final": "CC", "rank": "CD",
+    "tb1": "CE", "tb2": "CG", "tb3": "CI", "tb4": "CK",
+    "rank_tb": "CM", "rank_diff": "CN",
+    "errors": "CQ",
     # Breakdown of the scored run: run #, DS, TS, bonuses (bottle + pusher +
     # event time), penalties (run + impound). Final = 100 + DS + TS + B + P.
-    "bd_run": "CT", "bd_ds": "CU", "bd_ts": "CV", "bd_bonus": "CW", "bd_pen": "CX",
-    "exp_score": "CY", "exp_tier": "CZ", "exp_tiebreak": "DA", "exp_rank": "DB",
-    "points": "DC",
+    "bd_run": "CR", "bd_ds": "CS", "bd_ts": "CT", "bd_bonus": "CU", "bd_pen": "CV",
+    "exp_score": "CW", "exp_tier": "CX", "exp_tiebreak": "CY", "exp_rank": "CZ",
+    "points": "DA",
 }
 
-LISTED = "DE8"          # teams on the final rankings list
-LIST_SCHOOL = "DQ%d"    # final rankings: school, list starting on row 9
+LISTED = "DC8"          # teams on the final rankings list
+LIST_SCHOOL = "DO%d"    # final rankings: school, list starting on row 9
 
 SPEC = SheetSpec(INPUT_COLS, OUT_COLS, first_row=9, last_row=508)
 
@@ -174,7 +175,7 @@ RULES_EXAMPLE = Scenario(
 FAILED_RUNS = Scenario(
     "failed_runs",
     "Failed Runs score DS 2500 and TS 0.5 x Target; no bonuses; missing runs "
-    "fail; S/F inference; double-failed teams stay tied.",
+    "fail; S/F inference; double-failed teams split by pusher measurement.",
     teams=[
         team("BothFailed", run(1, sf=F), run(2, sf=F), pusher=16),
         # Only check-in boxes: two Failed Runs, but competed.
@@ -183,37 +184,38 @@ FAILED_RUNS = Scenario(
         team("FailedWithData", run(1, sf=F, time=12, vd=5, bd=5, bonus="T")),
         # No S/F but measurements: Successful.
         team("InferredSuccess", run(1, time=14, vd=10, bd=10)),
-        team("TiedA", run(1, sf=F), run(2, sf=F), pusher=10),
-        team("TiedB", run(1, sf=F), run(2, sf=F), pusher=30),
-        # Double-failed with violations: 5.k no longer holds them tied, so the
-        # pusher measurement (TB4) decides even though no Pusher Bonus applies.
+        # Double-failed teams tie on DS/TS/VD, so the pusher measurement (TB4)
+        # decides even though no Pusher Bonus applies: 10 < 16 < 30 < 35 (none).
+        team("FailedPusher10", run(1, sf=F), run(2, sf=F), pusher=10),
+        team("FailedPusher30", run(1, sf=F), run(2, sf=F), pusher=30),
+        # The same with violations.
         team("FailedViolLoser", run(1, sf=F, comp="F"), run(2, sf=F, comp="F"), pusher=30),
         team("FailedViolWinner", run(1, sf=F, comp="F"), run(2, sf=F, comp="F"), pusher=10),
     ],
     expect=keyed({
         "BothFailed": dict(
             r1_ds=2500, r1_ts=7, r1_bottle=0, r1_pusher=0, r1_pen=0, r1=FAILED, r2=FAILED,
-            final=FAILED, tb4="", rank=2, rank_tb=2, errors="",
+            final=FAILED, tb4=16, rank=2, rank_tb=3, errors="",
         ),
         "NoRuns": dict(
             r1_ds=2500, r1_ts=7, r1_bottle=0, r1_pusher=0, r1_pen=0, r1=FAILED, r2=FAILED,
-            final=FAILED, tb4="", rank=2, rank_tb=2, errors="",
+            final=FAILED, tb4=35, rank=2, rank_tb=5, errors="",
         ),
         "FailedWithData": dict(
             r1_ds=2500, r1_ts=7, r1_bottle=0, r1_pusher=0, r1_pen=0, r1=FAILED, r2=FAILED,
-            final=FAILED, tb4="", rank=2, rank_tb=2, errors="",
+            final=FAILED, tb4=35, rank=2, rank_tb=5, errors="",
         ),
         "InferredSuccess": dict(
             r1_ds=30, r1_ts=0, r1_bottle=0, r1_pusher=0, r1_pen=0, r1=130, r2=FAILED, final=130,
             tb4=35, rank=1, rank_tb=1, errors="",
         ),
-        "TiedA": dict(
+        "FailedPusher10": dict(
             r1_ds=2500, r1_ts=7, r1_bottle=0, r1_pusher=0, r1_pen=0, r1=FAILED, r2=FAILED,
-            final=FAILED, tb4="", rank=2, rank_tb=2, errors="",
+            final=FAILED, tb4=10, rank=2, rank_tb=2, errors="",
         ),
-        "TiedB": dict(
+        "FailedPusher30": dict(
             r1_ds=2500, r1_ts=7, r1_bottle=0, r1_pusher=0, r1_pen=0, r1=FAILED, r2=FAILED,
-            final=FAILED, tb4="", rank=2, rank_tb=2, errors="",
+            final=FAILED, tb4=30, rank=2, rank_tb=4, errors="",
         ),
         "FailedViolLoser": dict(
             r1_ds=2500, r1_ts=7, r1_bottle=0, r1_pusher=0, r1_pen=150, r1=FAILED + 150,
@@ -421,7 +423,7 @@ TIEBREAKS = Scenario(
 SCORED_RUN = Scenario(
     "scored_run",
     "The better Run Score counts; equal runs fall back to each run's own "
-    "tiebreaks: lower DS, then TS, then Vehicle Distance, then pusher.",
+    "tiebreaks: lower DS, then TS, then Vehicle Distance.",
     teams=[
         team("Run2Better", ok(1, bd=20), ok(2)),
         team("Run1Better", ok(1), ok(2, bd=20)),
@@ -435,32 +437,32 @@ SCORED_RUN = Scenario(
     ],
     expect=keyed({
         "Run2Better": dict(
-            r1=140, r2=130, r1_tb1=40, r1_tb2=0, r1_tb3=10, r1_tb4=35, r2_tb1=30, r2_tb2=0,
-            r2_tb3=10, r2_tb4=35, scored="->", run_score=130, tb1=30, tb2=0, tb3=10, tb4=35,
+            r1=140, r2=130, r1_tb1=40, r1_tb2=0, r1_tb3=10, r2_tb1=30, r2_tb2=0,
+            r2_tb3=10, scored="->", run_score=130, tb1=30, tb2=0, tb3=10, tb4=35,
         ),
         "Run1Better": dict(
-            r1=130, r2=140, r1_tb1=30, r1_tb2=0, r1_tb3=10, r1_tb4=35, r2_tb1=40, r2_tb2=0,
-            r2_tb3=10, r2_tb4=35, scored="<-", run_score=130, tb1=30, tb2=0, tb3=10, tb4=35,
+            r1=130, r2=140, r1_tb1=30, r1_tb2=0, r1_tb3=10, r2_tb1=40, r2_tb2=0,
+            r2_tb3=10, scored="<-", run_score=130, tb1=30, tb2=0, tb3=10, tb4=35,
         ),
         "EqualLowerDS": dict(
-            r1=140, r2=140, r1_tb1=40, r1_tb2=0, r1_tb3=10, r1_tb4=35, r2_tb1=30, r2_tb2=10,
-            r2_tb3=10, r2_tb4=35, scored="->", run_score=140, tb1=30, tb2=10, tb3=10, tb4=35,
+            r1=140, r2=140, r1_tb1=40, r1_tb2=0, r1_tb3=10, r2_tb1=30, r2_tb2=10,
+            r2_tb3=10, scored="->", run_score=140, tb1=30, tb2=10, tb3=10, tb4=35,
         ),
         "Identical": dict(
-            r1=130, r2=130, r1_tb1=30, r1_tb2=0, r1_tb3=10, r1_tb4=35, r2_tb1=30, r2_tb2=0,
-            r2_tb3=10, r2_tb4=35, scored="<-", run_score=130, tb1=30, tb2=0, tb3=10, tb4=35,
+            r1=130, r2=130, r1_tb1=30, r1_tb2=0, r1_tb3=10, r2_tb1=30, r2_tb2=0,
+            r2_tb3=10, scored="<-", run_score=130, tb1=30, tb2=0, tb3=10, tb4=35,
         ),
         "FailThenOK": dict(
-            r1=FAILED, r2=130, r1_tb1=2500, r1_tb2=7, r1_tb3="", r1_tb4=35, r2_tb1=30, r2_tb2=0,
-            r2_tb3=10, r2_tb4=35, scored="->", run_score=130, tb1=30, tb2=0, tb3=10, tb4=35,
+            r1=FAILED, r2=130, r1_tb1=2500, r1_tb2=7, r1_tb3="", r2_tb1=30, r2_tb2=0,
+            r2_tb3=10, scored="->", run_score=130, tb1=30, tb2=0, tb3=10, tb4=35,
         ),
         "EqualLowerVD1": dict(
-            r1=140, r2=140, r1_tb1=40, r1_tb2=0, r1_tb3=10, r1_tb4=35, r2_tb1=40, r2_tb2=0,
-            r2_tb3=15, r2_tb4=35, scored="<-", run_score=140, tb1=40, tb2=0, tb3=10, tb4=35,
+            r1=140, r2=140, r1_tb1=40, r1_tb2=0, r1_tb3=10, r2_tb1=40, r2_tb2=0,
+            r2_tb3=15, scored="<-", run_score=140, tb1=40, tb2=0, tb3=10, tb4=35,
         ),
         "EqualLowerVD2": dict(
-            r1=140, r2=140, r1_tb1=40, r1_tb2=0, r1_tb3=15, r1_tb4=35, r2_tb1=40, r2_tb2=0,
-            r2_tb3=10, r2_tb4=35, scored="->", run_score=140, tb1=40, tb2=0, tb3=10, tb4=35,
+            r1=140, r2=140, r1_tb1=40, r1_tb2=0, r1_tb3=15, r2_tb1=40, r2_tb2=0,
+            r2_tb3=10, scored="->", run_score=140, tb1=40, tb2=0, tb3=10, tb4=35,
         ),
     }),
     cells=TT14,
@@ -493,8 +495,8 @@ STATUSES = Scenario(
         ),
     }),
     extra=[
-        ("blank row status", "BZ{unused}", ""),
-        ("blank row score", "CY{unused}", ""),
+        ("blank row status", "BX{unused}", ""),
+        ("blank row score", "CW{unused}", ""),
         ("listed teams", LISTED, 4),
         ("1st", LIST_SCHOOL % 9, "Competitor"),
         ("2nd", LIST_SCHOOL % 10, "Lithium"),
@@ -544,7 +546,7 @@ INPUT_ERRORS = Scenario(
         "Clean2":          dict(status="C", errors="", exp_score=140, exp_rank=2, points=2),
     }),
     extra=[
-        ("errors header (no counter)", "CS8", "Errors"),
+        ("errors header (no counter)", "CQ8", "Errors"),
         ("listed teams", LISTED, 3),
         ("1st", LIST_SCHOOL % 9, "Clean"),
         ("2nd", LIST_SCHOOL % 10, "Clean2"),

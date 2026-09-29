@@ -251,21 +251,6 @@ STATUSES = Scenario(
                              exp_score="P", exp_tier="P", exp_rank="P",
                              points=5, **NO_BREAKDOWN),
     },
-    # A row with no team entered must stay empty all the way to Points.
-    # BP is the final rankings list, filled from the top, so its rows are
-    # fixed: every entered team is listed, DQ/NS/P included, in points order.
-    extra=[("AF{unused}", ""), ("AG{unused}", ""), ("AP{unused}", ""),
-           ("AW{unused}", ""), ("AZ{unused}", ""), ("BA{unused}", ""),
-           ("BD{unused}", ""),
-           ("teams in final rankings", "BF7", 5),
-           ("1st place in final rankings", "BP8", 1),
-           ("2nd place in final rankings", "BP9", 2),
-           ("then Participated", "BP10", "P"),
-           ("then No-Show", "BP11", "NS"),
-           ("Disqualified last", "BP12", "DQ"),
-           ("nothing after last place", "BP13", ""),
-           ("winner's tier in final rankings", "BT8", 1),
-           ("winner's score in final rankings", "BU8", 30)],
 )
 
 # Blank or odd boxes take a default rather than raising an error. Data

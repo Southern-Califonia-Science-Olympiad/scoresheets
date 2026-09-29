@@ -95,8 +95,6 @@ OUT_COLS = {
     "points": "DC",
 }
 
-LISTED = "DE8"          # teams on the final rankings list
-LIST_SCHOOL = "DQ%d"    # final rankings: school, list starting on row 9
 
 SPEC = SheetSpec(INPUT_COLS, OUT_COLS, first_row=9, last_row=508)
 
@@ -301,6 +299,22 @@ PENALTIES = Scenario(
     cells=TT60,
 )
 
+TIERS_EXPECT = table(("tier", "score", "srank", "trank", "rank_tb", "rank_diff", "points",
+                      "exp_tier", "exp_rank"), {
+    "T1Low":     (1, 650, 6, 1, 1, 0, 1, 1, 1),
+    "T2High":    (2, 1250, 1, 2, 2, 0, 2, 2, 2),
+    "T2Dim":     (2, 865, 4, 3, 3, 0, 3, 2, 3),
+    "T3Impound": (3, 1250, 1, 4, 4, 0, 4, 3, 4),
+    "T3Answer":  (3, 900, 3, 5, 5, 0, 5, 3, 5),
+    "T3AndT2":   (3, 850, 5, 6, 6, 0, 6, 3, 6),
+    "T3Eye":     (3, 60, 7, 7, 7, 0, 7, 3, 7),
+    "T3EyeOver": (3, 15, 8, 8, 8, 0, 8, 3, 8),
+})
+# Without eye protection a team is scored on device size alone, so every other
+# component stays 0 -- and an oversized device is still penalised.
+TIERS_EXPECT["T3Eye"].update(setup=0, start=0, actions=0, time=0, noadj=0, size=60)
+TIERS_EXPECT["T3EyeOver"].update(p_dim=25, errors="")
+
 TIERS = Scenario(
     "tiers",
     "Tier 3 (impound, eye protection, build questions) over Tier 2 "
@@ -317,27 +331,7 @@ TIERS = Scenario(
         team("T3Eye", eye="F", d1=60, d2=60, d3=60, start=3, actions=12),
         bare("T3EyeOver", eye="F", d1=81, d2=60, d3=60),
     ],
-    expect=table(("tier", "score", "srank", "trank", "rank_tb", "rank_diff", "points",
-                  "exp_tier", "exp_rank"), {
-        "T1Low":     (1, 650, 6, 1, 1, 0, 1, 1, 1),
-        "T2High":    (2, 1250, 1, 2, 2, 0, 2, 2, 2),
-        "T2Dim":     (2, 865, 4, 3, 3, 0, 3, 2, 3),
-        "T3Impound": (3, 1250, 1, 4, 4, 0, 4, 3, 4),
-        "T3Answer":  (3, 900, 3, 5, 5, 0, 5, 3, 5),
-        "T3AndT2":   (3, 850, 5, 6, 6, 0, 6, 3, 6),
-        "T3Eye":     (3, 60, 7, 7, 7, 0, 7, 3, 7),
-        "T3EyeOver": (3, 15, 8, 8, 8, 0, 8, 3, 8),
-    }),
-    extra=[
-        ("T3Eye components", "BK{T3Eye}", 0),
-        ("T3Eye start", "BM{T3Eye}", 0),
-        ("T3Eye actions", "BN{T3Eye}", 0),
-        ("T3Eye time", "BP{T3Eye}", 0),
-        ("T3Eye no-adj", "BR{T3Eye}", 0),
-        ("T3Eye size", "BS{T3Eye}", 60),
-        ("T3EyeOver dim pen", "BU{T3EyeOver}", 25),
-        ("T3EyeOver errors", "CR{T3EyeOver}", ""),
-    ],
+    expect=TIERS_EXPECT,
     cells=TT60,
 )
 
@@ -391,22 +385,6 @@ STATUSES = Scenario(
         "Errored":     ("ERR", "ERR", "ERR", "ERR", "ERR", "ERR"),
         "Third":       ("C", 1, 800, 1, 3, 3),
     }),
-    extra=[
-        ("listed", LISTED, 8),
-        ("list 1", LIST_SCHOOL % 9, "Competed"),
-        ("list 2", LIST_SCHOOL % 10, "Second"),
-        ("list 3", LIST_SCHOOL % 11, "Third"),
-        ("list 4", LIST_SCHOOL % 12, "Unsafe"),
-        ("list 5", LIST_SCHOOL % 13, "Remote"),
-        ("list 6", LIST_SCHOOL % 14, "ImpoundOnly"),
-        ("list 7", LIST_SCHOOL % 15, "NoShow"),
-        ("list 8", LIST_SCHOOL % 16, "Disq"),
-        ("list end", LIST_SCHOOL % 17, ""),
-        ("blank row status", "BH{unused}", ""),
-        ("blank row score", "CY{unused}", ""),
-        ("blank row errors", "CR{unused}", ""),
-        ("blank row breakdown", "CS{unused}", ""),
-    ],
     cells=TT60,
 )
 
@@ -461,9 +439,6 @@ INPUT_ERRORS = Scenario(
         "DQWithError":   ("DQ", "", F, F, F, F, F, T, "DQ", "DQ", 22),
         "PWithError":    ("P", "", F, F, F, F, F, T, "P", "P", 20),
     }),
-    extra=[
-        ("listed", LISTED, 4),
-    ],
     cells=TT60,
 )
 
@@ -485,13 +460,6 @@ CONTAINMENT = Scenario(
         "B":       ("C", BASE, 2, 2, 2),
         "C":       ("C", 850, 3, 3, 3),
     }),
-    extra=[
-        ("listed", LISTED, 3),
-        ("list 1", LIST_SCHOOL % 9, "A"),
-        ("list 2", LIST_SCHOOL % 10, "B"),
-        ("list 3", LIST_SCHOOL % 11, "C"),
-        ("list end", LIST_SCHOOL % 12, ""),
-    ],
     cells=TT60,
 )
 

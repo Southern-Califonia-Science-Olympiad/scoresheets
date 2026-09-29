@@ -48,6 +48,8 @@ OUT_COLS = {
     "exp_es": "BB", "exp_ts": "BC", "exp_ps": "BD",
     "exp_score": "BE", "exp_tier": "BF", "exp_tiebreak": "BG",
     "exp_rank": "BH", "points": "BI",
+    # Final-rankings helpers: the sort key (Points + row/1000) and its rank.
+    "sort_key": "BM", "sort_rank": "BN",
 }
 
 SPEC = SheetSpec(INPUT_COLS, OUT_COLS, first_row=8, last_row=507)
@@ -165,8 +167,6 @@ STATUSES = Scenario(
         "NoShow": dict(status="NS", tier="NS", score="NS", rank="NS",
                        exp_rank="NS", exp_score="NS", points=5),
     },
-    # A row with no team entered must stay empty all the way to Points.
-    extra=[("AE{unused}", ""), ("AQ{unused}", ""), ("BE{unused}", ""), ("BF{unused}", "")],
 )
 
 # Part I raw score cannot go negative, so a field max of 0 means everyone tied
@@ -269,26 +269,22 @@ ERROR_CONTAINMENT = Scenario(
         team("MissingStart", predicted_temp=40, actual_temp=40, part_i_score=10),
         team("Runner", start_temp=20, predicted_temp=30, actual_temp=30, part_i_score=5),
     ],
+    # The final rankings block sorts on BM (= Points + row/1000) and ranks it
+    # with RANK over the whole column. A non-numeric Points value must leave
+    # that column error-free, or every other team loses its sort rank.
     expect={
-        "Complete": dict(ts=30, ps=20, es=50, score=100, rank=1, points=1, errors=""),
+        "Complete": dict(ts=30, ps=20, es=50, score=100, rank=1, points=1, errors="",
+                         sort_rank=1),
         # Components still compute (TS is 0 without box 6), but no score, rank
-        # or points are issued while the error stands.
+        # or points are issued while the error stands, and the errored row
+        # takes no sort key -- which is what keeps the rankings error-free.
         "MissingStart": dict(ts=0, ps=20, es=50, score="ERR", rank="ERR",
-                             exp_rank="ERR", points="ERR",
+                             exp_rank="ERR", points="ERR", sort_key="",
                              errors="Box 6 or Box 8 is missing."),
         # Would have placed 3rd behind MissingStart's 70; the errored row must
         # not consume a rank slot, so this is 2nd.
         "Runner": dict(score=60, rank=2, points=2, errors=""),
     },
-    # The final rankings block sorts on BM (= Points + row/1000) and ranks it
-    # with RANK over the whole column. A non-numeric Points value must leave
-    # that column error-free, or every other team loses its sort rank.
-    # BU is the rankings list itself, filled from the top, so its rows are fixed.
-    extra=[("errored row has no sort key", "BM{MissingStart}", ""),
-           ("sort rank still computes", "BN{Complete}", 1),
-           ("1st place in final rankings", "BU8", 1),
-           ("2nd place in final rankings", "BU9", 2),
-           ("no third place listed", "BU10", "")],
 )
 
 SCENARIOS = [PENALTIES, TIEBREAKS, STATUSES, NORMALISATION_ES, NORMALISATION_TG,

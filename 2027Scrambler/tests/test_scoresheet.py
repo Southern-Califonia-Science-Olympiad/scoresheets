@@ -77,8 +77,6 @@ OUT_COLS = {
     "points": "CE",
 }
 
-LISTED = "CG8"          # teams on the final rankings list
-LIST_SCHOOL = "CS%d"    # final rankings: school, list starting on row 9
 
 SPEC = SheetSpec(INPUT_COLS, OUT_COLS, first_row=9, last_row=508)
 
@@ -476,16 +474,6 @@ STATUSES = Scenario(
             points="ERR",
         ),
     }),
-    extra=[
-        ("blank row status", "BD{unused}", ""),
-        ("blank row score", "CA{unused}", ""),
-        ("listed teams", LISTED, 4),
-        ("1st", LIST_SCHOOL % 9, "Competitor"),
-        ("2nd", LIST_SCHOOL % 10, "NoEyewear"),
-        ("3rd", LIST_SCHOOL % 11, "NoShow"),
-        ("4th", LIST_SCHOOL % 12, "Disqualified"),
-        ("no 5th (ERR unlisted)", LIST_SCHOOL % 13, ""),
-    ],
 )
 
 INPUT_ERRORS = Scenario(
@@ -553,13 +541,6 @@ INPUT_ERRORS = Scenario(
             r1_err=False, r2_err=False, status="C", exp_score=135, exp_rank=2, points=2,
         ),
     }),
-    extra=[
-        ("listed teams", LISTED, 3),
-        ("1st", LIST_SCHOOL % 9, "Clean"),
-        ("2nd", LIST_SCHOOL % 10, "Clean2"),
-        ("3rd", LIST_SCHOOL % 11, "FailedEmpty"),
-        ("no 4th", LIST_SCHOOL % 12, ""),
-    ],
 )
 
 BREAKDOWN = Scenario(

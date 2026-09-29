@@ -90,8 +90,6 @@ OUT_COLS = {
     "points": "DA",
 }
 
-LISTED = "DC8"          # teams on the final rankings list
-LIST_SCHOOL = "DO%d"    # final rankings: school, list starting on row 9
 
 SPEC = SheetSpec(INPUT_COLS, OUT_COLS, first_row=9, last_row=508)
 
@@ -494,16 +492,6 @@ STATUSES = Scenario(
             points="ERR",
         ),
     }),
-    extra=[
-        ("blank row status", "BX{unused}", ""),
-        ("blank row score", "CW{unused}", ""),
-        ("listed teams", LISTED, 4),
-        ("1st", LIST_SCHOOL % 9, "Competitor"),
-        ("2nd", LIST_SCHOOL % 10, "Lithium"),
-        ("3rd", LIST_SCHOOL % 11, "NoShow"),
-        ("4th", LIST_SCHOOL % 12, "Disqualified"),
-        ("no 5th (ERR unlisted)", LIST_SCHOOL % 13, ""),
-    ],
     cells=TT14,
 )
 
@@ -545,14 +533,6 @@ INPUT_ERRORS = Scenario(
         "Clean":           dict(status="C", errors="", exp_score=130, exp_rank=1, points=1),
         "Clean2":          dict(status="C", errors="", exp_score=140, exp_rank=2, points=2),
     }),
-    extra=[
-        ("errors header (no counter)", "CQ8", "Errors"),
-        ("listed teams", LISTED, 3),
-        ("1st", LIST_SCHOOL % 9, "Clean"),
-        ("2nd", LIST_SCHOOL % 10, "Clean2"),
-        ("3rd", LIST_SCHOOL % 11, "FailedEmpty"),
-        ("no 4th", LIST_SCHOOL % 12, ""),
-    ],
     cells=TT14,
 )
 

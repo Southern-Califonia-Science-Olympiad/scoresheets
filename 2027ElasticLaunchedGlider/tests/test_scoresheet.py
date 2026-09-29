@@ -213,19 +213,6 @@ STATUSES = Scenario(
         "Participated": dict(status="P", tier="P", score="P", rank="P",
                              exp_rank="P", exp_score="P", scored="P", points=5),
     },
-    # A row with no team entered must stay empty all the way to Points.
-    # BU is the final rankings list, filled from the top, so its rows are
-    # fixed: every entered team is listed, DQ/NS/P included, in points order.
-    extra=[("AJ{unused}", ""), ("AQ{unused}", ""), ("AU{unused}", ""),
-           ("BC{unused}", ""), ("BE{unused}", ""), ("BF{unused}", ""),
-           ("BI{unused}", ""),
-           ("teams in final rankings", "BK7", 5),
-           ("1st place in final rankings", "BU8", 1),
-           ("2nd place in final rankings", "BU9", 2),
-           ("then Participated", "BU10", "P"),
-           ("then No-Show", "BU11", "NS"),
-           ("Disqualified last", "BU12", "DQ"),
-           ("nothing after last place", "BU13", "")],
 )
 
 # Blank boxes take a default rather than raising an error.

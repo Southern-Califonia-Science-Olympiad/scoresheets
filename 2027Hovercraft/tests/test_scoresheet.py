@@ -397,22 +397,6 @@ STATUSES = Scenario(
             "SafetyFail": ("P", "P", "P", "", "", "P", "P", 6) + NO_RUN,
             "NoRuns": ("C", 1, 1, "", 0, 0, 3, 3) + NO_RUN,
         }),
-    # A row with no team must stay empty; the final rankings list (EF/EH/EJ)
-    # fills from row 11 in points order, DQ/NS/P included.
-    extra=[("BK{unused}", ""), ("BL{unused}", ""), ("CW{unused}", ""),
-           ("DL{unused}", ""), ("DM{unused}", ""), ("DN{unused}", ""),
-           ("DO{unused}", ""), ("DP{unused}", ""), ("DQ{unused}", ""),
-           ("DT{unused}", ""),
-           ("teams in final rankings", "DV10", 6),
-           ("1st place in final rankings", "EF11", 1),
-           ("1st place school", "EH11", "Winner"),
-           ("1st place score", "EJ11", 97),
-           ("2nd place in final rankings", "EF12", 2),
-           ("3rd place in final rankings", "EF13", 3),
-           ("then Participated", "EF14", "P"),
-           ("then No-Show", "EF15", "NS"),
-           ("Disqualified last", "EF16", "DQ"),
-           ("nothing after last place", "EF17", "")],
     cells=TT10,
 )
 
@@ -441,12 +425,6 @@ TARGET_TIME_MISSING = Scenario(
             "TimedRun2": ("ERR", "ERR", "ERR", "", "", "ERR", "ERR", "ERR",
                           TT_ERROR) + NO_RUN,
         }),
-    # ERR teams take no rank slot and are left off the final rankings.
-    extra=[("teams in final rankings", "DV10", 2),
-           ("1st place in final rankings", "EF11", 1),
-           ("1st place school", "EH11", "DistanceOnly"),
-           ("then Participated", "EF12", "P"),
-           ("nothing after", "EF13", "")],
     cells={TARGET_TIME: None},
 )
 

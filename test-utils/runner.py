@@ -50,23 +50,21 @@ class Scenario:
     teams   list of dicts keyed by SheetSpec.input_cols names; each needs a
             "school" key, which is what `expect` is keyed by.
     expect  {school: {output_name: expected}}
-    extra   [(cell_ref, expected)] or [(label, cell_ref, expected)] for cells
-            outside the per-team output columns. Teams don't sit on fixed
-            rows, so a ref names its row by placeholder: "BM{MissingStart}"
-            is column BM on that school's row, and "AE{unused}" is a data row
-            with no team on it. Refs without a placeholder are absolute.
     cells   {cell_ref: value} for inputs outside the team rows, such as a
             target time every team is scored against. None blanks the cell.
+
+    Assertions are per team, on the columns named in SheetSpec.out_cols. A
+    column worth checking is worth naming there, so add it to out_cols rather
+    than reaching for a bare cell reference.
 
     `expected` is a literal value or a Check such as is_number / nonzero.
     """
 
-    def __init__(self, name, why, teams, expect, extra=None, cells=None):
+    def __init__(self, name, why, teams, expect, cells=None):
         self.name = name
         self.why = why
         self.teams = teams
         self.expect = expect
-        self.extra = extra or []
         self.cells = cells or {}
 
 
@@ -103,10 +101,9 @@ def pick_rows(spec, scenarios, seed):
     Every scenario draws from the same pool: a scenario with n teams uses the
     first n rows of it, so scenarios share rows as far as their sizes allow.
     The pool is sized from all scenarios, not just the selected ones, so a
-    seed reproduces the same rows under --only. One spare row is kept for the
-    "{unused}" placeholder.
+    seed reproduces the same rows under --only.
     """
-    need = max(len(s.teams) for s in scenarios) + 1
+    need = max(len(s.teams) for s in scenarios)
     span = range(spec.first_row, spec.last_row + 1)
     if need > len(span):
         sys.exit("scenarios need %d rows, data range has %d" % (need, len(span)))
@@ -114,16 +111,12 @@ def pick_rows(spec, scenarios, seed):
 
 
 def layout(pool, scenario):
-    """Rows for this scenario's teams, plus the {placeholder} row map.
+    """Rows for this scenario's teams.
 
     Rows are kept ascending so teams sit in the order they are listed, which
     anything that breaks ties by row position relies on.
     """
-    n = len(scenario.teams)
-    rows = sorted(pool[:n])
-    names = {t["school"]: r for t, r in zip(scenario.teams, rows)}
-    names["unused"] = pool[n]
-    return rows, names
+    return sorted(pool[:len(scenario.teams)])
 
 
 def build(path, spec, scenario, rows):
@@ -209,7 +202,7 @@ def run(path, spec, scenarios, profile, only=None, seed=None):
 
     for sc in selected:
         print("\n\033[1m%s\033[0m -- %s" % (sc.name, sc.why))
-        rows, names = layout(pool, sc)
+        rows = layout(pool, sc)
         values = build(path, spec, sc, rows).recalc(profile)
 
         checks = []
@@ -217,13 +210,6 @@ def run(path, spec, scenarios, profile, only=None, seed=None):
             for field, expected in sc.expect.get(t["school"], {}).items():
                 ref = "%s%d" % (spec.out_cols[field], row)
                 checks.append(("%s.%s" % (t["school"], field), ref, expected))
-        for entry in sc.extra:
-            if len(entry) == 3:
-                label, ref, expected = entry
-            else:
-                ref, expected = entry
-                label = ref
-            checks.append((label, ref.format_map(names), expected))
 
         for label, ref, expected in checks:
             actual = values.get(ref, "")

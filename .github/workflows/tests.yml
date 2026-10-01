@@ -1,0 +1,30 @@
+name: Tests
+
+# Runs every event's suite. The release workflow does not re-run these; it
+# requires a passing run of this workflow on the tagged commit.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      # Caches the installed .debs keyed on the package list, so only the first
+      # run (or a package-list change) pays for the LibreOffice download.
+      - name: Install LibreOffice (cached)
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.3
+        with:
+          packages: libreoffice-calc
+          version: 1.0
+
+      - name: Run scoresheet suites
+        run: make

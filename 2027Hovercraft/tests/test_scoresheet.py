@@ -51,9 +51,9 @@ INPUT_COLS = {
     "dq": "AH",          # box 12 Disqualify (T/F)
 }
 # Per run, boxes 3-11: construction violations, competition violations,
-# no touching (T/F), ramp not used (T/F), C/I, nickel rolls, loose nickels,
+# ramp not used (T/F), no touching (T/F), C/I, nickel rolls, loose nickels,
 # distance from finish (cm), run time (s).
-RUN_FIELDS = ["const", "comp", "notouch", "noramp", "ci", "rolls", "nickels",
+RUN_FIELDS = ["const", "comp", "noramp", "notouch", "ci", "rolls", "nickels",
               "dist", "time"]
 RUN_COLS = {1: "G H I J K L M N O", 2: "P Q R S T U V W X",
             3: "Y Z AA AB AC AD AE AF AG"}

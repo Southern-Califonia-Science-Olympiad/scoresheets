@@ -25,41 +25,42 @@ INPUT_COLS = {
     "team_no": "B", "school": "C", "team": "D",
     "impounded": "G",    # box 1  Device Impounded
     "no_hazmat": "H",    # box 2  No hazardous materials
-    "const_para": "I",   # box 3  Met all construction parameters
-    "no_touch": "J",     # box 4  Did not touch setup during Heating Time
-    "comp_para": "K",    # box 5  Met all competition parameters
-    "start_temp": "L",   # box 6
-    "predicted_temp": "M",    # box 7
-    "actual_temp": "N",       # box 8
-    "part_i_score": "O",          # box 9  Part I Raw Score
-    "tb3": "P",          # box 10 Tiebreak 3 ranking
-    "dq": "Q",           # box 11 Disqualify
+    "no_energy": "I",    # box 3  Rule 3.f: no energy sources to warm the water
+    "const_viol": "J",   # box 4  # of construction violations
+    "no_touch": "K",     # box 5  Did not touch setup during Heating Time
+    "comp_viol": "L",    # box 6  # of competition violations
+    "start_temp": "M",   # box 7
+    "predicted_temp": "N",    # box 8
+    "actual_temp": "O",       # box 9
+    "part_i_score": "P",          # box 10 Part I Raw Score
+    "tb3": "Q",          # box 11 Tiebreak 3 ranking
+    "dq": "R",           # box 12 Disqualify
 }
 
 # Computed columns worth asserting on.
 OUT_COLS = {
-    "status": "AE", "tier": "AF", "mult": "AG", "tg": "AH",
-    "raw_ts": "AJ", "ts": "AK", "pe": "AL", "raw_ps": "AN", "ps": "AO",
-    "es": "AP", "score": "AQ", "rank": "AR",
-    "tb1": "AS", "tb1_rank": "AT", "tb2": "AU", "tb2_rank": "AV",
-    "tb3_rank": "AW", "rank_tb": "AX", "rank_diff": "AY",
-    "errors": "BA",
+    "status": "AG", "tier": "AH", "mult": "AI", "tg": "AJ",
+    "raw_ts": "AL", "ts": "AM", "pe": "AN", "raw_ps": "AP", "ps": "AQ",
+    "es": "AR", "score": "AS", "rank": "AT",
+    "tb1": "AU", "tb1_rank": "AV", "tb2": "AW", "tb2_rank": "AX",
+    "tb3_rank": "AY", "rank_tb": "AZ", "rank_diff": "BA",
+    "errors": "BC",
     # Visible score breakdown, immediately right of Errors, in ES/TS/PS order.
-    "exp_es": "BB", "exp_ts": "BC", "exp_ps": "BD",
-    "exp_score": "BE", "exp_tier": "BF", "exp_tiebreak": "BG",
-    "exp_rank": "BH", "points": "BI",
+    "exp_es": "BD", "exp_ts": "BE", "exp_ps": "BF",
+    "exp_score": "BG", "exp_tier": "BH", "exp_tiebreak": "BI",
+    "exp_rank": "BJ", "points": "BK",
     # Final-rankings helpers: the sort key (Points + row/1000) and its rank.
-    "sort_key": "BM", "sort_rank": "BN",
+    "sort_key": "BO", "sort_rank": "BP",
 }
 
 SPEC = SheetSpec(INPUT_COLS, OUT_COLS, first_row=8, last_row=507)
 
-BOXES_OK = {"impounded": "T", "no_hazmat": "T", "const_para": "T",
-            "no_touch": "T", "comp_para": "T"}
+# Boxes 4 and 6 are violation counts; blank means none.
+BOXES_OK = {"impounded": "T", "no_hazmat": "T", "no_energy": "T", "no_touch": "T"}
 
 
 def team(school, **kw):
-    """A competing team: all five T/F boxes pass unless overridden."""
+    """A competing team: every T/F box passes and no violations unless overridden."""
     row = dict(BOXES_OK)
     row["school"] = school
     row.update(kw)
@@ -67,7 +68,7 @@ def team(school, **kw):
 
 
 def bare(school, **kw):
-    """A team with no box inputs at all -- boxes 1-9 blank means No-Show."""
+    """A team with no box inputs at all -- boxes 1-10 blank means No-Show."""
     row = {"school": school}
     row.update(kw)
     return row
@@ -86,13 +87,16 @@ SAME_NUMBERS = dict(start_temp=20, predicted_temp=40, actual_temp=40, part_i_sco
 
 PENALTIES = Scenario(
     "penalties",
-    "Construction/competition penalty multipliers and the T/U/W gates.",
+    "Per-violation multipliers (0.7 construction, 0.9 competition) and the T/U/V/W gates.",
     teams=[
-        team("ConstructionPenaltyA", const_para="F", **SAME_NUMBERS),
-        team("ConstructionPenaltyB", const_para="F", **SAME_NUMBERS),
-        team("CompetitionPenalty", comp_para="F", **SAME_NUMBERS),
-        team("BothPenalties", const_para="F", comp_para="F", **SAME_NUMBERS),
+        team("ConstructionPenaltyA", const_viol=1, **SAME_NUMBERS),
+        team("ConstructionPenaltyB", const_viol=1, **SAME_NUMBERS),
+        team("TwoConstruction", const_viol=2, **SAME_NUMBERS),
+        team("CompetitionPenalty", comp_viol=1, **SAME_NUMBERS),
+        team("TwoCompetition", comp_viol=2, **SAME_NUMBERS),
+        team("BothPenalties", const_viol=1, comp_viol=1, **SAME_NUMBERS),
         team("TouchedSetup", no_touch="F", **SAME_NUMBERS),
+        team("EnergySource", no_energy="F", **SAME_NUMBERS),
         team("Hazmat", no_hazmat="F", **SAME_NUMBERS),
         team("NotImpounded", impounded="F", **SAME_NUMBERS),
         team("Clean", **SAME_NUMBERS),
@@ -101,14 +105,41 @@ PENALTIES = Scenario(
         # Identical inputs on two different rows -- both must yield 0.7.
         "ConstructionPenaltyA": dict(mult=0.7, tg=20, ts=21, ps=14, es=50, score=85),
         "ConstructionPenaltyB": dict(mult=0.7, tg=20, ts=21, ps=14, es=50, score=85),
+        # The multiplier applies once per violation.
+        "TwoConstruction": dict(mult=0.49, tg=20, ts=14.7, ps=9.8, es=50, score=74.5),
         "CompetitionPenalty": dict(mult=0.9, tg=20, ts=27, ps=18, es=50, score=95),
+        "TwoCompetition": dict(mult=0.81, tg=20, ts=24.3, ps=16.2, es=50, score=90.5),
         "BothPenalties": dict(mult=0.63, tg=20, ts=18.9, ps=12.6, es=50, score=81.5),
-        # Box 4 gates Raw TS and Raw PS but NOT the TG calculation itself.
+        # Box 5 gates Raw TS and Raw PS but NOT the TG calculation itself.
         "TouchedSetup": dict(mult=1, tg=20, raw_ts=0, ts=0, ps=0, es=50, score=50),
+        # Box 3 (rule 3.f) zeroes TS and PS the same way, with no multiplier.
+        "EnergySource": dict(mult=1, tg=20, raw_ts=0, ts=0, ps=0, es=50, score=50),
         # Boxes 1 and 2 gate TG and PE themselves, so both come back blank.
         "Hazmat": dict(tg="", pe="", ts=0, ps=0, es=50, score=50),
         "NotImpounded": dict(tg="", pe="", ts=0, ps=0, es=50, score=50),
         "Clean": dict(mult=1, tg=20, ts=30, ps=20, es=50, score=100),
+    },
+)
+
+# Boxes 4 and 6 are counts. Blank, text, negative or fractional entries (a
+# paste can get past the whole-number validation) take the normal path: no
+# violation, or the whole violations entered.
+VIOLATION_COUNTS = Scenario(
+    "violation_counts",
+    "Blank, text and negative counts mean no violation; fractions round down.",
+    teams=[
+        team("Blank", **SAME_NUMBERS),
+        team("Zero", const_viol=0, comp_viol=0, **SAME_NUMBERS),
+        team("Text", const_viol="abc", comp_viol="x", **SAME_NUMBERS),
+        team("Negative", const_viol=-2, comp_viol=-1, **SAME_NUMBERS),
+        team("Fraction", const_viol=1.9, **SAME_NUMBERS),
+    ],
+    expect={
+        "Blank": dict(mult=1, score=100),
+        "Zero": dict(mult=1, score=100),
+        "Text": dict(mult=1, score=100),
+        "Negative": dict(mult=1, score=100),
+        "Fraction": dict(mult=0.7, score=85),
     },
 )
 
@@ -235,26 +266,26 @@ PS_NO_PREDICTIONS = Scenario(
     },
 )
 
-# The Errors column (BA) surfaces the AI/AM checks to the scorer. Messages are
-# derived from the inputs rather than from ISERROR(AH), so they stay correct if
+# The Errors column (BC) surfaces the AK/AO checks to the scorer. Messages are
+# derived from the inputs rather than from ISERROR(AJ), so they stay correct if
 # TG/PE are later changed to degrade instead of erroring.
 INPUT_ERRORS = Scenario(
     "input_errors",
     "Missing or zero temperature boxes must name themselves in the Errors column.",
     teams=[
         team("Complete", start_temp=20, predicted_temp=40, actual_temp=40, part_i_score=10),
-        # box 6 blank -- TG cannot be computed
+        # box 7 blank -- TG cannot be computed
         team("NoStartTemp", predicted_temp=40, actual_temp=40, part_i_score=10),
-        # box 8 blank -- TG and PE both lose their actual temperature
+        # box 9 blank -- TG and PE both lose their actual temperature
         team("NoActualTemp", start_temp=20, predicted_temp=40, part_i_score=10),
-        # box 8 present but zero -- PE divides by it
+        # box 9 present but zero -- PE divides by it
         team("ZeroActualTemp", start_temp=20, predicted_temp=40, actual_temp=0, part_i_score=10),
     ],
     expect={
         "Complete": dict(errors=""),
-        "NoStartTemp": dict(errors="Box 6 or Box 8 is missing."),
-        "NoActualTemp": dict(errors="Box 6 or Box 8 is missing."),
-        "ZeroActualTemp": dict(errors="Box 8 cannot be 0."),
+        "NoStartTemp": dict(errors="Box 7 or Box 9 is missing."),
+        "NoActualTemp": dict(errors="Box 7 or Box 9 is missing."),
+        "ZeroActualTemp": dict(errors="Box 9 cannot be 0."),
     },
 )
 
@@ -280,18 +311,18 @@ ERROR_CONTAINMENT = Scenario(
         # takes no sort key -- which is what keeps the rankings error-free.
         "MissingStart": dict(ts=0, ps=20, es=50, score="ERR", rank="ERR",
                              exp_rank="ERR", points="ERR", sort_key="",
-                             errors="Box 6 or Box 8 is missing."),
+                             errors="Box 7 or Box 9 is missing."),
         # Would have placed 3rd behind MissingStart's 70; the errored row must
         # not consume a rank slot, so this is 2nd.
         "Runner": dict(score=60, rank=2, points=2, errors=""),
     },
 )
 
-SCENARIOS = [PENALTIES, TIEBREAKS, STATUSES, NORMALISATION_ES, NORMALISATION_TG,
+SCENARIOS = [PENALTIES, VIOLATION_COUNTS, TIEBREAKS, STATUSES, NORMALISATION_ES, NORMALISATION_TG,
              NORMALISATION_PE, PS_NO_PREDICTIONS, INPUT_ERRORS, ERROR_CONTAINMENT]
 
-# BB/BC/BD are the visible breakdown beside Errors; they exist only to display
-# the working columns AP/AK/AO. Wherever a scenario asserts a component, assert
+# BD/BE/BF are the visible breakdown beside Errors; they exist only to display
+# the working columns AR/AM/AQ. Wherever a scenario asserts a component, assert
 # the same value on the column that shows it, so the two cannot drift apart.
 # Derived rather than written out per team: a mirror is not a separate fact.
 MIRRORED = {"es": "exp_es", "ts": "exp_ts", "ps": "exp_ps"}

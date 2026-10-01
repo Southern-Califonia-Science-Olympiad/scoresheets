@@ -18,8 +18,8 @@ Rules under test (2027 C rules, sections 4-9; high score wins):
     Time; No Adjustments 75; Device Size 0.1 per 0.1 cm under 80 cm, max 30
     per dimension.
   - Penalties: 2 per full second past the Target Time (up to 2x); 25 per
-    dimension over 80 cm; 25 top/walls not open; 25 per touch, max 3 (a
-    touched start is one of them); 50 solid/liquid leaving; 250 electricity
+    dimension over 80 cm; 25 top/walls not open; 25 per touch, max 3 (box 22
+    already counts a touched start); 50 solid/liquid leaving; 250 electricity
     after 30 s.
   - A touch leading to the Final Action: no Final Action points, Time Score 0.
   - Tier 3: not impounded on time, no eye protection, can't answer build
@@ -158,7 +158,7 @@ SCORING = Scenario(
         team("Start3", start=3),
         team("Start4", start=4),
         team("StartText2", start="2"),
-        team("StartTouch", start="Touch"),
+        team("StartTouch", start="Touch", touches=1),
         team("Actions12", actions=12),
         team("Actions0", actions=0),
         team("ActionsBlank", actions=None),
@@ -178,7 +178,7 @@ SCORING = Scenario(
         "Start3":       (50, 100, 200, 250, 250, 120, 0, 75, 30, 0, 0, 1075, "C", 1),
         "Start4":       (50, 100, 0, 250, 250, 120, 0, 75, 30, 0, 0, 875, "C", 1),
         "StartText2":   (50, 100, 50, 250, 250, 120, 0, 75, 30, 0, 0, 925, "C", 1),
-        # a touched start: no start points, one touch (-25), no 75 bonus
+        # a touched start (box 22 = 1): no start points, one touch (-25), no 75 bonus
         "StartTouch":   (50, 100, 0, 250, 250, 120, 0, 0, 30, 1, 25, 775, "C", 1),
         "Actions12":    (50, 100, 25, 600, 250, 120, 0, 75, 30, 0, 0, 1250, "C", 1),
         "Actions0":     (50, 100, 25, 0, 250, 120, 0, 75, 30, 0, 0, 650, "C", 1),
@@ -273,14 +273,14 @@ PEN_FIELDS = ("p_over", "p_dim", "p_open", "p_touch", "p_solid", "p_elec",
 
 PENALTIES = Scenario(
     "penalties",
-    "Each penalty, touches capped at 3 including a touched start, and all of "
+    "Each penalty, touches capped at 3, box 22 counting a touched start, and all of "
     "them at once.",
     teams=[
         team("Walls", walls="F"),
         team("Touches2", touches=2),
         team("Touches3", touches=3),
-        team("TouchStartPlus1", start="Touch", touches=1),
-        team("TouchStartPlus3", start="Touch", touches=3),
+        team("TouchStart2", start="Touch", touches=2),
+        team("TouchStart3", start="Touch", touches=3),
         team("Solid", solid="F"),
         team("Electric", elec="F"),
         team("Everything", walls="F", touches=1, solid="F", elec="F", time=70, d1=81),
@@ -289,8 +289,8 @@ PENALTIES = Scenario(
         "Walls":           (0, 0, 25, 0, 0, 0, 25, 0, 75, 25, 875),
         "Touches2":        (0, 0, 0, 50, 0, 0, 50, 2, 0, 25, 775),
         "Touches3":        (0, 0, 0, 75, 0, 0, 75, 3, 0, 25, 750),
-        "TouchStartPlus1": (0, 0, 0, 50, 0, 0, 50, 2, 0, 0, 750),
-        "TouchStartPlus3": (0, 0, 0, 75, 0, 0, 75, 3, 0, 0, 725),
+        "TouchStart2":    (0, 0, 0, 50, 0, 0, 50, 2, 0, 0, 750),
+        "TouchStart3":    (0, 0, 0, 75, 0, 0, 75, 3, 0, 0, 725),
         "Solid":           (0, 0, 0, 0, 50, 0, 50, 0, 75, 25, 850),
         "Electric":        (0, 0, 0, 0, 0, 250, 250, 0, 75, 25, 650),
         # 815 in awards (no 75 bonus; size 0 + 10 + 10) less 20+25+25+25+50+250

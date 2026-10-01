@@ -122,24 +122,28 @@ def scenarios(bonus):
 
         Scenario(
             "tiebreaks",
-            "equal scores break on estimate accuracy, then mass; a full tie holds",
+            "equal scores break on lower mass, then estimate accuracy; a full tie holds",
             teams=[
-                # All four score 600; Base option, so no division difference.
-                team("Exact", estimate=6000, mass=10, load=6000),    # TB1 0
-                team("Light", estimate=5000, mass=10, load=6000),    # TB1 1000, mass 10
-                team("Heavy", estimate=11000, mass=20, load=12000),  # TB1 1000, mass 20
+                # All five score 600; Base option, so no division difference.
+                team("Exact", estimate=6000, mass=10, load=6000),    # mass 10, miss 0
+                team("Light", estimate=5000, mass=10, load=6000),    # mass 10, miss 1000
                 team("Twin", estimate=5000, mass=10, load=6000),     # identical to Light
+                # Spot-on estimate but heavier: mass is TB1, so it ranks
+                # behind every 10 g structure despite the better estimate.
+                team("HeavyExact", estimate=12000, mass=20, load=12000),
+                team("Heavy", estimate=11000, mass=20, load=12000),  # mass 20, miss 1000
             ],
-            # All four tie on score, so each starts at rank 1 and the
+            # All five tie on score, so each starts at rank 1 and the
             # tiebreak column reports the places the cascade cost them.
             expect=table(("score", "tiebreak", "rank"), {
                 "Exact": (600, 0, 1),
-                # Light and Twin are identical on score, estimate and mass:
+                # Light and Twin are identical on score, mass and estimate:
                 # a genuine tie, so they share the rank...
                 "Light": (600, -1, 2),
                 "Twin": (600, -1, 2),
                 # ...and the tie consumes both places.
-                "Heavy": (600, -3, 4),
+                "HeavyExact": (600, -3, 4),
+                "Heavy": (600, -4, 5),
             }),
         ),
 

@@ -14,6 +14,9 @@ Rules under test:
     least one rocket meets the construction parameters.
   - Box 1 = F means no rocket can launch: the team is P (Participated).
     A blank box 1 passes.
+  - Flight time is the median of the timers, entered from the checklist as
+    minutes and seconds; the mirrors convert MM:SS to total seconds. A blank
+    half counts as 0.
   - A flight is scoreable only if it has a time. A team with no scoreable
     flight is P.
   - Flight score = time x Practice Log multiplier (Complete 1, Incomplete
@@ -40,25 +43,27 @@ INPUT_COLS = {
     "team_no": "B", "school": "C", "team": "D",
     "const": "E",        # box 1  At least one rocket met all construction parameters
     "log": "F",          # box 2  Practice Log: Complete / Incomplete / Not present
-    # Flight 1: box 3 time, 4 parachute separates, 5 no ceiling touch
-    "t1": "G", "sep1": "H", "ceil1": "I",
+    # Flight 1: box 3 time (mins, secs), 4 parachute separates, 5 no ceiling touch
+    "m1": "G", "s1": "H", "sep1": "I", "ceil1": "J",
     # Flight 2: boxes 6-8, same order
-    "t2": "J", "sep2": "K", "ceil2": "L",
-    "dq": "M",           # box 9  Disqualify
+    "m2": "K", "s2": "L", "sep2": "M", "ceil2": "N",
+    "dq": "O",           # box 9  Disqualify
 }
 
 # Computed columns worth asserting on.
 OUT_COLS = {
-    "log_mult": "P",
-    "f1_ok": "X", "f2_ok": "Y", "status": "Z", "tier": "AA",
-    "f1_time": "AB", "f1_mult": "AC", "f1_score": "AD",
-    "f2_time": "AE", "f2_mult": "AF", "f2_score": "AG",
-    "scored": "AH", "non_scored": "AI", "score": "AJ", "rank": "AK",
-    "tb1": "AL", "tb1_rank": "AM", "rank_tb": "AN", "rank_diff": "AO",
+    # MM:SS converted to total seconds, one mirror per flight.
+    "secs1": "S", "secs2": "V",
+    "log_mult": "R",
+    "f1_ok": "Z", "f2_ok": "AA", "status": "AB", "tier": "AC",
+    "f1_time": "AD", "f1_mult": "AE", "f1_score": "AF",
+    "f2_time": "AG", "f2_mult": "AH", "f2_score": "AI",
+    "scored": "AJ", "non_scored": "AK", "score": "AL", "rank": "AM",
+    "tb1": "AN", "tb1_rank": "AO", "rank_tb": "AP", "rank_diff": "AQ",
     # Visible breakdown and export block.
-    "exp_scored": "AQ", "exp_time": "AR", "exp_mult": "AS",
-    "exp_score": "AT", "exp_tier": "AU", "exp_tiebreak": "AV",
-    "exp_rank": "AW", "points": "AX",
+    "exp_scored": "AS", "exp_time": "AT", "exp_mult": "AU",
+    "exp_score": "AV", "exp_tier": "AW", "exp_tiebreak": "AX",
+    "exp_rank": "AY", "points": "AZ",
 }
 
 SPEC = SheetSpec(INPUT_COLS, OUT_COLS, first_row=8, last_row=507)
@@ -68,13 +73,13 @@ def team(school, *times, **kw):
     """A competing team: construction passes and the Practice Log is Complete
     (multiplier 1), so a flight's score equals its time unless overridden.
 
-    Each positional argument is a flight time in seconds; None leaves that box
-    blank. Parachute and ceiling boxes are left blank (pass) unless given as
+    Each positional argument is a flight time in seconds, entered in the
+    Seconds box (minutes left blank); None leaves that flight blank. Parachute and ceiling boxes are left blank (pass) unless given as
     sep1=, ceil2=, ... Pass const=None to leave box 1 blank.
     """
     row = {"school": school, "const": "T", "log": "Complete"}
     for i, seconds in enumerate(times, 1):
-        row["t%d" % i] = seconds
+        row["s%d" % i] = seconds
     row.update(kw)
     return {k: v for k, v in row.items() if v is not None}
 
@@ -251,7 +256,39 @@ DEFAULTS = Scenario(
     },
 )
 
-SCENARIOS = [CONSTRUCTION, MULTIPLIERS, TIEBREAKS, STATUSES, DEFAULTS]
+# The flight time box is two columns, minutes and seconds (the checklist
+# records minutes:seconds); the mirrors convert them to total seconds before
+# anything else uses the time.
+MM_SS = Scenario(
+    "mm_ss",
+    "Minutes and seconds convert to total seconds; a blank half counts as 0.",
+    teams=[
+        # 1:05 and 2:00 -> 65 s and 120 s, so flight 2 is the better one.
+        team("MinutesAndSeconds", m1=1, s1=5, m2=2),
+        # Seconds only, including a value past a minute, and decimals.
+        team("SecondsOnly", 75, 12.5),
+        # Minutes only on both flights.
+        team("MinutesOnly", m1=3, m2=1),
+        # Fractional seconds survive the conversion: 1:05.5 = 65.5 s.
+        team("FractionalSeconds", m1=1, s1=5.5),
+        # An unreadable minutes box voids that flight's whole time.
+        team("TextMinutes", None, 25, m1="abc", s1=20),
+    ],
+    expect={
+        "MinutesAndSeconds": dict(secs1=65, secs2=120, f1_time=65, f2_time=120,
+                                  score=120, scored=2, tb1=65),
+        "SecondsOnly": dict(secs1=75, secs2=12.5, score=75, scored=1, tb1=12.5),
+        "MinutesOnly": dict(secs1=180, secs2=60, score=180, scored=1, tb1=60),
+        # The unflown flight's mirror stays blank; only the 0 s default
+        # reaches the working column.
+        "FractionalSeconds": dict(secs1=65.5, secs2="", f2_time=0, score=65.5,
+                                  tb1=0),
+        "TextMinutes": dict(secs1="", f1_ok=False, f1_time=0, f2_ok=True,
+                            score=25, tb1=0),
+    },
+)
+
+SCENARIOS = [CONSTRUCTION, MULTIPLIERS, TIEBREAKS, STATUSES, MM_SS, DEFAULTS]
 
 # Visible columns that only display a working column: wherever a scenario
 # asserts the working value, assert the same on the column that shows it, so

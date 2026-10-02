@@ -18,12 +18,14 @@ Rules under test (2027 C rules, sections 4-9; high score wins):
     Time; No Adjustments 75; Device Size 0.1 per 0.1 cm under 80 cm, max 30
     per dimension.
   - Penalties: 2 per full second past the Target Time (up to 2x); 25 per
-    dimension over 80 cm; 25 top/walls not open; 25 per touch, max 3 (box 22
+    dimension over 80 cm; 25 top/walls not open; 25 per touch, max 3 (box 23
     already counts a touched start); 50 solid/liquid leaving; 250 electricity
     after 30 s.
   - A touch leading to the Final Action: no Final Action points, Time Score 0.
   - Tier 3: not impounded on time, no eye protection, can't answer build
-    questions. Tier 2: construction violation, or any dimension over 82 cm.
+    questions. Tier 2: construction violation, leaving the event area or
+    taking outside help during check-in (box 12), coins not returned to the ES
+    (box 26), or any dimension over 82 cm.
     Tier 1 ranks above Tier 2 above Tier 3 regardless of score.
   - No eye protection: does not run, Tier 3, scored on device size alone
     (Device Size Score less the over-80 cm penalty).
@@ -59,40 +61,42 @@ INPUT_COLS = {
     "const": "M",          # 9. All const params met (T/F)
     "remote": "N",         # 10. Remote Controlled (T/F)
     "answer": "O",         # 11. Team able to answer questions (T/F)
-    "setup30": "P",        # 12. <= 30 min to set up (T/F)
-    "setup15": "Q",        # 13. State/Nats Only: <= 15 min to set up (T/F)
-    "asl_format": "R",     # 14. ASL proper format (T/F)
-    "asl_accurate": "S",   # 15. All actions included and accurate (T/F)
-    "asl_labelled": "T",   # 16. ASL # properly labelled (T/F)
-    "start": "U",          # 17. Start Action (# of coins or Touch)
-    "actions": "V",        # 18. # of successful actions
-    "water": "W",          # 19. Water Timer (sec)
-    "no_touch_final": "X",  # 20. No Touches leading to Final Action (T/F)
-    "final": "Y",          # 21. Final Action Satisfied (T/F)
-    "touches": "Z",        # 22. Adjustments/Touches
-    "elec": "AA",          # 23. No electricity used after 30 s (T/F)
-    "solid": "AB",         # 24. No Solid/liquid leaving (T/F)
-    "time": "AC",          # 25. Device Time (s)
-    "dq": "AD",            # 26. Disqualify (T/F)
+    "stayed": "P",         # 12. Stayed in the event area, no outside help (T/F)
+    "setup30": "Q",        # 13. <= 30 min to set up (T/F)
+    "setup15": "R",        # 14. State/Nats Only: <= 15 min to set up (T/F)
+    "asl_format": "S",     # 15. ASL proper format (T/F)
+    "asl_accurate": "T",   # 16. All actions included and accurate (T/F)
+    "asl_labelled": "U",   # 17. ASL # properly labelled (T/F)
+    "start": "V",          # 18. Start Action (# of coins or Touch)
+    "actions": "W",        # 19. # of successful actions
+    "water": "X",          # 20. Water Timer (sec)
+    "no_touch_final": "Y",  # 21. No Touches leading to Final Action (T/F)
+    "final": "Z",          # 22. Final Action Satisfied (T/F)
+    "touches": "AA",       # 23. Adjustments/Touches
+    "elec": "AB",          # 24. No electricity used after 30 s (T/F)
+    "solid": "AC",         # 25. No Solid/liquid leaving (T/F)
+    "coins": "AD",         # 26. All coins returned to the ES (T/F)
+    "time": "AE",          # 27. Device Time (s)
+    "dq": "AF",            # 28. Disqualify (T/F)
 }
 
 OUT_COLS = {
-    "status": "BH", "tier": "BI", "touches": "BJ",
-    "setup": "BK", "asl": "BL", "start": "BM", "actions": "BN", "final": "BO",
-    "time": "BP", "water": "BQ", "noadj": "BR", "size": "BS",
-    "p_over": "BT", "p_dim": "BU", "p_open": "BV", "p_touch": "BW",
-    "p_solid": "BX", "p_elec": "BY", "pen": "BZ",
-    "score": "CA", "srank": "CB", "trank": "CC", "tb1r": "CD",
-    "tb2": "CE", "tb2r": "CF", "rank_tb": "CG", "rank_diff": "CH",
-    "e_tt": "CI", "e_dim": "CJ", "e_start": "CK", "e_act": "CL",
-    "e_water": "CM", "e_touch": "CN", "e_time": "CO",
-    "errors": "CR",
+    "status": "BL", "tier": "BM", "touches": "BN",
+    "setup": "BO", "asl": "BP", "start": "BQ", "actions": "BR", "final": "BS",
+    "time": "BT", "water": "BU", "noadj": "BV", "size": "BW",
+    "p_over": "BX", "p_dim": "BY", "p_open": "BZ", "p_touch": "CA",
+    "p_solid": "CB", "p_elec": "CC", "pen": "CD",
+    "score": "CE", "srank": "CF", "trank": "CG", "tb1r": "CH",
+    "tb2": "CI", "tb2r": "CJ", "rank_tb": "CK", "rank_diff": "CL",
+    "e_tt": "CM", "e_dim": "CN", "e_start": "CO", "e_act": "CP",
+    "e_water": "CQ", "e_touch": "CR", "e_time": "CS",
+    "errors": "CV",
     # Breakdown: Set-Up & ASL, Actions (start + scorable + final), Time Score,
     # Bonus (water timer + no adjustments), Device Size, Penalties. Sums to Score.
-    "bd_setup": "CS", "bd_actions": "CT", "bd_time": "CU", "bd_bonus": "CV",
-    "bd_size": "CW", "bd_pen": "CX",
-    "exp_score": "CY", "exp_tier": "CZ", "exp_tiebreak": "DA", "exp_rank": "DB",
-    "points": "DC",
+    "bd_setup": "CW", "bd_actions": "CX", "bd_time": "CY", "bd_bonus": "CZ",
+    "bd_size": "DA", "bd_pen": "DB",
+    "exp_score": "DC", "exp_tier": "DD", "exp_tiebreak": "DE", "exp_rank": "DF",
+    "points": "DG",
 }
 
 
@@ -178,7 +182,7 @@ SCORING = Scenario(
         "Start3":       (50, 100, 200, 250, 250, 120, 0, 75, 30, 0, 0, 1075, "C", 1),
         "Start4":       (50, 100, 0, 250, 250, 120, 0, 75, 30, 0, 0, 875, "C", 1),
         "StartText2":   (50, 100, 50, 250, 250, 120, 0, 75, 30, 0, 0, 925, "C", 1),
-        # a touched start (box 22 = 1): no start points, one touch (-25), no 75 bonus
+        # a touched start (box 23 = 1): no start points, one touch (-25), no 75 bonus
         "StartTouch":   (50, 100, 0, 250, 250, 120, 0, 0, 30, 1, 25, 775, "C", 1),
         "Actions12":    (50, 100, 25, 600, 250, 120, 0, 75, 30, 0, 0, 1250, "C", 1),
         "Actions0":     (50, 100, 25, 0, 250, 120, 0, 75, 30, 0, 0, 650, "C", 1),
@@ -273,7 +277,7 @@ PEN_FIELDS = ("p_over", "p_dim", "p_open", "p_touch", "p_solid", "p_elec",
 
 PENALTIES = Scenario(
     "penalties",
-    "Each penalty, touches capped at 3, box 22 counting a touched start, and all of "
+    "Each penalty, touches capped at 3, box 23 counting a touched start, and all of "
     "them at once.",
     teams=[
         team("Walls", walls="F"),
@@ -332,6 +336,39 @@ TIERS = Scenario(
         bare("T3EyeOver", eye="F", d1=81, d2=60, d3=60),
     ],
     expect=TIERS_EXPECT,
+    cells=TT60,
+)
+
+TIER2_CHECKS = Scenario(
+    "tier2_checks",
+    "Box 12 (left the event area / outside help) or box 26 (coins not "
+    "returned) at F puts a team in Tier 2 with no point penalty; blank and T "
+    "pass; Tier 3 wins; Tier 1 ranks above Tier 2 regardless of score; DQ and "
+    "P keep their status.",
+    # 9 teams: P scores 9 points (the team count), DQ 11 (count + 2).
+    teams=[
+        team("T1Low", actions=0),
+        team("StayedT", stayed="T", coins="T", actions=6),
+        team("StayedF", stayed="F"),
+        team("CoinsF", coins="F", actions=12),
+        team("BothF", stayed="F", coins="F", actions=4),
+        team("T3Coins", impound="F", coins="F", actions=12),
+        bare("EyeBoth", eye="F", d1=60, d2=60, d3=60, stayed="F", coins="F"),
+        team("DisqBoxes", dq="T", stayed="F", coins="F"),
+        team("UnsafeCoins", safe="F", coins="F"),
+    ],
+    expect=table(("status", "tier", "score", "pen", "srank", "rank_tb", "exp_tier",
+                  "exp_rank", "points"), {
+        "StayedT":     ("C", 1, 950, 0, 3, 1, 1, 1, 1),
+        "T1Low":       ("C", 1, 650, 0, 6, 2, 1, 2, 2),
+        "CoinsF":      ("C", 2, 1250, 0, 1, 3, 2, 3, 3),
+        "StayedF":     ("C", 2, 900, 0, 4, 4, 2, 4, 4),
+        "BothF":       ("C", 2, 850, 0, 5, 5, 2, 5, 5),
+        "T3Coins":     ("C", 3, 1250, 0, 1, 6, 3, 6, 6),
+        "EyeBoth":     ("C", 3, 60, 0, 7, 7, 3, 7, 7),
+        "DisqBoxes":   ("DQ", "DQ", "DQ", "", "DQ", "DQ", "DQ", "DQ", 11),
+        "UnsafeCoins": ("P", "P", "P", "", "P", "P", "P", "P", 9),
+    }),
     cells=TT60,
 )
 
@@ -519,7 +556,8 @@ BREAKDOWN = Scenario(
 )
 
 SCENARIOS = [
-    SCORING, TIME_SCORE, STATE_TARGET, DEVICE_SIZE, PENALTIES, TIERS, TIEBREAKS,
+    SCORING, TIME_SCORE, STATE_TARGET, DEVICE_SIZE, PENALTIES, TIERS, TIER2_CHECKS,
+    TIEBREAKS,
     STATUSES, INPUT_ERRORS, CONTAINMENT, TARGET_TIME_MISSING, TARGET_TIME_TEXT,
     BREAKDOWN,
 ]

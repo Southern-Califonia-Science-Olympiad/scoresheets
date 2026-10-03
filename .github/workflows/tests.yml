@@ -18,13 +18,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4.2.2
 
-      # Caches the installed .debs keyed on the package list, so only the first
-      # run (or a package-list change) pays for the LibreOffice download.
-      - name: Install LibreOffice (cached)
-        uses: awalsh128/cache-apt-pkgs-action@v1.6.3
-        with:
-          packages: libreoffice-calc
-          version: 1.0
+      - name: Install LibreOffice
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-calc
 
       - name: Run scoresheet suites
         run: make

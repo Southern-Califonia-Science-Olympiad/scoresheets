@@ -280,6 +280,27 @@ BOTTLE_PAST_TARGET = Scenario(
     cells=TT14,
 )
 
+PUSHER_CAP = Scenario(
+    "pusher_cap",
+    "A Bottle Pusher Width above the 35 cm baseline earns no Pusher Bonus "
+    "(capped at 0), but the tiebreak still uses the measured width.",
+    teams=[
+        team("Wide", ok(1), pusher=50),
+        team("Wider", ok(1), pusher=60),
+        team("AtBonusNetZero", ok(1), pusher=35),
+        team("Narrow", ok(1), pusher=20),
+        team("NoPusher", ok(1, vd=8), pusher=None),
+    ],
+    expect=keyed({
+        "Wide": dict(r1_pusher=0, r1=130, final=130, tb4=50, rank=3, rank_tb=4, status="C", errors=""),
+        "Wider": dict(r1_pusher=0, r1=130, final=130, tb4=60, rank=3, rank_tb=5, status="C", errors=""),
+        "AtBonusNetZero": dict(r1_pusher=0, r1=130, final=130, tb4=35, rank=3, rank_tb=3, status="C", errors=""),
+        "Narrow": dict(r1_pusher=-22.5, r1=107.5, final=107.5, tb4=20, rank=1, rank_tb=1, status="C", errors=""),
+        "NoPusher": dict(r1_pusher=0, r1=126, final=126, tb4=35, rank=2, rank_tb=2, status="C", errors=""),
+    }),
+    cells=TT14,
+)
+
 PENALTIES = Scenario(
     "penalties",
     "Run penalties on each run (Failed Runs too), impound on the Final Score, "
@@ -595,7 +616,7 @@ BREAKDOWN = Scenario(
     cells=TT14,
 )
 
-SCENARIOS = [RULES_EXAMPLE, FAILED_RUNS, BOTTLE_PAST_TARGET, PENALTIES, EVENT_TIME,
+SCENARIOS = [RULES_EXAMPLE, FAILED_RUNS, BOTTLE_PAST_TARGET, PUSHER_CAP, PENALTIES, EVENT_TIME,
              TIEBREAKS, SCORED_RUN, STATUSES, INPUT_ERRORS,
              TARGET_TIME_MISSING, TARGET_TIME_TEXT, BREAKDOWN]
 

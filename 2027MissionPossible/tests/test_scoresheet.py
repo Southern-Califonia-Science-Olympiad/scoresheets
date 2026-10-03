@@ -59,7 +59,7 @@ INPUT_COLS = {
     "d1": "I", "d2": "J", "d3": "K",   # 5-7. Dimensions (cm)
     "walls": "L",          # 8. Top & 2+ vertical walls transparent/open (T/F)
     "const": "M",          # 9. All const params met (T/F)
-    "remote": "N",         # 10. Remote Controlled (T/F)
+    "remote": "N",         # 10. Not Remote Controlled (T/F)
     "answer": "O",         # 11. Team able to answer questions (T/F)
     "stayed": "P",         # 12. Stayed in the event area, no outside help (T/F)
     "setup30": "Q",        # 13. <= 30 min to set up (T/F)
@@ -114,7 +114,7 @@ T, F = True, False     # per-row input check flags
 BASE = 900
 
 BASE_INPUTS = dict(
-    eye="T", safe="T", d1=70, d2=70, d3=70, setup30="T",
+    eye="T", safe="T", d1=70, d2=70, d3=70, remote="T", setup30="T",
     asl_on_time="T", asl_format="T", asl_accurate="T", asl_labelled="T",
     start=1, actions=5, final="T", time=60,
 )
@@ -402,11 +402,11 @@ STATUSES = Scenario(
     "points, a blank row, and the final rankings list.",
     teams=[
         team("Competed"),
-        team("Second", actions=4),
+        team("Second", actions=4, remote=None),   # box 10 blank: no penalty
         team("Disq", dq="T"),
         bare("NoShow"),
         team("Unsafe", safe="F"),
-        team("Remote", remote="T"),
+        team("Remote", remote="F"),
         bare("ImpoundOnly", impound="T", asl_on_time="T"),
         team("Errored", time=None),
         team("Third", actions=3),

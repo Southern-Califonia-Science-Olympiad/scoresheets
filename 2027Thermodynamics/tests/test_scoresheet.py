@@ -23,40 +23,39 @@ DEFAULT_SHEET = HERE.parent / "scoresheet_bc.xlsx"
 # Input boxes, by the numbering printed in row 3 of the Scoring sheet.
 INPUT_COLS = {
     "team_no": "B", "school": "C", "team": "D",
-    "impounded": "G",    # box 1  Device Impounded
-    "no_hazmat": "H",    # box 2  No hazardous materials
-    "no_energy": "I",    # box 3  Rule 3.f: no energy sources to warm the water
-    "const_viol": "J",   # box 4  # of construction violations
-    "no_touch": "K",     # box 5  Did not touch setup during Heating Time
-    "comp_viol": "L",    # box 6  # of competition violations
-    "start_temp": "M",   # box 7
-    "predicted_temp": "N",    # box 8
-    "actual_temp": "O",       # box 9
-    "part_i_score": "P",          # box 10 Part I Raw Score
-    "tb3": "Q",          # box 11 Tiebreak 3 ranking
-    "dq": "R",           # box 12 Disqualify
+    "no_hazmat": "G",    # box 1  No hazardous materials
+    "no_energy": "H",    # box 2  Rule 3.f: no energy sources to warm the water
+    "const_viol": "I",   # box 3  # of construction violations
+    "no_touch": "J",     # box 4  Did not touch setup during Heating Time
+    "comp_viol": "K",    # box 5  # of competition violations
+    "start_temp": "L",   # box 6
+    "predicted_temp": "M",    # box 7
+    "actual_temp": "N",       # box 8
+    "part_i_score": "O",          # box 9 Part I Raw Score
+    "tb3": "P",          # box 10 Tiebreak 3 ranking
+    "dq": "Q",           # box 11 Disqualify
 }
 
 # Computed columns worth asserting on.
 OUT_COLS = {
-    "status": "AG", "tier": "AH", "mult": "AI", "tg": "AJ",
-    "raw_ts": "AL", "ts": "AM", "pe": "AN", "raw_ps": "AP", "ps": "AQ",
-    "es": "AR", "score": "AS", "rank": "AT",
-    "tb1": "AU", "tb1_rank": "AV", "tb2": "AW", "tb2_rank": "AX",
-    "tb3_rank": "AY", "rank_tb": "AZ", "rank_diff": "BA",
-    "errors": "BC",
+    "status": "AE", "tier": "AF", "mult": "AG", "tg": "AH",
+    "raw_ts": "AJ", "ts": "AK", "pe": "AL", "raw_ps": "AN", "ps": "AO",
+    "es": "AP", "score": "AQ", "rank": "AR",
+    "tb1": "AS", "tb1_rank": "AT", "tb2": "AU", "tb2_rank": "AV",
+    "tb3_rank": "AW", "rank_tb": "AX", "rank_diff": "AY",
+    "errors": "BA",
     # Visible score breakdown, immediately right of Errors, in ES/TS/PS order.
-    "exp_es": "BD", "exp_ts": "BE", "exp_ps": "BF",
-    "exp_score": "BG", "exp_tier": "BH", "exp_tiebreak": "BI",
-    "exp_rank": "BJ", "points": "BK",
+    "exp_es": "BB", "exp_ts": "BC", "exp_ps": "BD",
+    "exp_score": "BE", "exp_tier": "BF", "exp_tiebreak": "BG",
+    "exp_rank": "BH", "points": "BI",
     # Final-rankings helpers: the sort key (Points + row/1000) and its rank.
-    "sort_key": "BO", "sort_rank": "BP",
+    "sort_key": "BM", "sort_rank": "BN",
 }
 
 SPEC = SheetSpec(INPUT_COLS, OUT_COLS, first_row=8, last_row=507)
 
-# Boxes 4 and 6 are violation counts; blank means none.
-BOXES_OK = {"impounded": "T", "no_hazmat": "T", "no_energy": "T", "no_touch": "T"}
+# Boxes 3 and 5 are violation counts; blank means none.
+BOXES_OK = {"no_hazmat": "T", "no_energy": "T", "no_touch": "T"}
 
 
 def team(school, **kw):
@@ -98,7 +97,7 @@ PENALTIES = Scenario(
         team("TouchedSetup", no_touch="F", **SAME_NUMBERS),
         team("EnergySource", no_energy="F", **SAME_NUMBERS),
         team("Hazmat", no_hazmat="F", **SAME_NUMBERS),
-        team("NotImpounded", impounded="F", **SAME_NUMBERS),
+        team("NotImpounded", const_viol=1, **SAME_NUMBERS),
         team("Clean", **SAME_NUMBERS),
     ],
     expect={
@@ -110,13 +109,15 @@ PENALTIES = Scenario(
         "CompetitionPenalty": dict(mult=0.9, tg=20, ts=27, ps=18, es=50, score=95),
         "TwoCompetition": dict(mult=0.81, tg=20, ts=24.3, ps=16.2, es=50, score=90.5),
         "BothPenalties": dict(mult=0.63, tg=20, ts=18.9, ps=12.6, es=50, score=81.5),
-        # Box 5 gates Raw TS and Raw PS but NOT the TG calculation itself.
+        # Box 4 gates Raw TS and Raw PS but NOT the TG calculation itself.
         "TouchedSetup": dict(mult=1, tg=20, raw_ts=0, ts=0, ps=0, es=50, score=50),
-        # Box 3 (rule 3.f) zeroes TS and PS the same way, with no multiplier.
+        # Box 2 (rule 3.f) zeroes TS and PS the same way, with no multiplier.
         "EnergySource": dict(mult=1, tg=20, raw_ts=0, ts=0, ps=0, es=50, score=50),
-        # Boxes 1 and 2 gate TG and PE themselves, so both come back blank.
+        # Box 1 gate TG and PE themselves, so both come back blank.
         "Hazmat": dict(tg="", pe="", ts=0, ps=0, es=50, score=50),
-        "NotImpounded": dict(tg="", pe="", ts=0, ps=0, es=50, score=50),
+        # Not Impounding count as a construction violation
+        # https://soinc.org/no-penalty-listed-scoring-section-if-team-doesnt-impound-what-consequence-not-impounding-0
+        "NotImpounded": dict(mult=0.7, tg=20, ts=21, ps=14, es=50, score=85),
         "Clean": dict(mult=1, tg=20, ts=30, ps=20, es=50, score=100),
     },
 )
